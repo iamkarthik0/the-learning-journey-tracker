@@ -17,6 +17,8 @@
   "d1_databases": [{
     "binding": "DB",
     "database_name": "the-learning-journey",
-    "database_id": "b2118336-dcc0-4c03-8906-01ea62642c44"
+    "database_id": "b2118336-dcc0-4c03-8906-01ea62642c44",
+    "migrations_dir": "drizzle"
  }]
+ 
 }
