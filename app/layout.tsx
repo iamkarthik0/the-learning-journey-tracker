@@ -1,6 +1,12 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { Inter } from "next/font/google";
+import { cn } from "@/lib/utils";
+
+
+
 
 // Local Inter font from public/webfonts (weights 100-700)
 const inter = localFont({
@@ -41,7 +47,7 @@ const inter = localFont({
       style: 'normal',
     },
   ],
-  variable: '--font-inter',
+  variable: '--font-sans',
   display: 'swap',
 });
 
@@ -56,8 +62,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`h-full antialiased ${inter.variable}`}>
-      <body className="min-h-full flex flex-col font-sans">{children}</body>
+    <html lang="en" className={cn("h-full", "antialiased", "font-sans", inter.variable)}>
+      <body className="min-h-full flex flex-col font-sans"><TooltipProvider>{children}
+
+</TooltipProvider>
+
+        
+      </body>
     </html>
   );
 }

@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "the-learning-journey-tracker",
-  "compatibility_date": "2026-05-20",
+  "compatibility_date": "2026-05-18",
   "compatibility_flags": [
     "nodejs_compat"
   ],
@@ -13,5 +13,10 @@
   },
   "images": {
     "binding": "IMAGES"
-  }
+  },
+  "d1_databases": [{
+    "binding": "DB",
+    "database_name": "the-learning-journey",
+    "database_id": "b2118336-dcc0-4c03-8906-01ea62642c44"
+ }]
 }
