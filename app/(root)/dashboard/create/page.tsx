@@ -1,13 +1,26 @@
 import { Suspense } from 'react';
 import { SchoolForm } from '@/components/Dashboard/createSchool/school-form';
-import { UserForm } from '@/components/Dashboard/createSchool/user-form';
 import { SchoolsList } from '@/components/Dashboard/createSchool/schools-list';
-import { UsersList } from '@/components/Dashboard/createSchool/users-list';
-import { getSchools } from '@/lib/actions/user-actions';
+import { PeriodSessionForm } from '@/components/Dashboard/createPeriodSession/period-session-form';
+import { PeriodSessionsList, PeriodSessionsListSkeleton } from '@/components/Dashboard/createPeriodSession/period-sessions-list';
+import { TeacherForm } from '@/components/Dashboard/createTeacher/teacher-form';
+import { TeachersList, TeachersListSkeleton } from '@/components/Dashboard/createTeacher/teachers-list';
+import { SubjectForm } from '@/components/Dashboard/createSubject/subject-form';
+import { SubjectsList, SubjectsListSkeleton } from '@/components/Dashboard/createSubject/subjects-list';
+import { getTeachers } from '@/lib/actions/teacher-actions';
+import { getSubjects } from '@/lib/actions/subject-actions';
 
-async function UserFormWrapper() {
-  const schools = await getSchools();
-  return <UserForm schools={schools} />;
+async function SubjectFormWrapper() {
+  const teachers = await getTeachers();
+  return <SubjectForm teachers={teachers} />;
+}
+
+async function PeriodSessionFormWrapper() {
+  const [teachers, subjects] = await Promise.all([
+    getTeachers(),
+    getSubjects(),
+  ]);
+  return <PeriodSessionForm teachers={teachers} subjects={subjects} />;
 }
 
 export default function DemoPage() {
@@ -15,7 +28,7 @@ export default function DemoPage() {
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <h1 className="text-4xl font-bold text-gray-900 mb-8">
-          Learning Journey Tracker Demo
+          Learning Journey Tracker
         </h1>
 
         <div className="grid gap-8 lg:grid-cols-2">
@@ -26,25 +39,41 @@ export default function DemoPage() {
               <SchoolForm />
             </div>
 
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-2xl font-bold mb-4">Create User</h2>
-              <Suspense
-                fallback={
-                  <div className="animate-pulse space-y-4">
-                    <div className="h-10 bg-gray-200 rounded"></div>
-                    <div className="h-10 bg-gray-200 rounded"></div>
-                  </div>
-                }
-              >
-                <UserFormWrapper />
-              </Suspense>
-            </div>
+            <TeacherForm />
+
+            <Suspense
+              fallback={
+                <div className="animate-pulse space-y-4">
+                  <div className="h-10 bg-gray-200 rounded"></div>
+                </div>
+              }
+            >
+              <SubjectFormWrapper />
+            </Suspense>
+
+            <Suspense
+              fallback={
+                <div className="animate-pulse space-y-4">
+                  <div className="h-10 bg-gray-200 rounded"></div>
+                </div>
+              }
+            >
+              <PeriodSessionFormWrapper />
+            </Suspense>
           </div>
 
           {/* Data Display Section */}
           <div className="space-y-8">
             <SchoolsList />
-            <UsersList />
+            <Suspense fallback={<TeachersListSkeleton />}>
+              <TeachersList />
+            </Suspense>
+            <Suspense fallback={<SubjectsListSkeleton />}>
+              <SubjectsList />
+            </Suspense>
+            <Suspense fallback={<PeriodSessionsListSkeleton />}>
+              <PeriodSessionsList />
+            </Suspense>
           </div>
         </div>
       </div>

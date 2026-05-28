@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { getSchools } from '@/lib/actions/user-actions';
+import { getSchools } from '@/lib/actions/school-actions';
 
 async function SchoolsData() {
   const schools = await getSchools();

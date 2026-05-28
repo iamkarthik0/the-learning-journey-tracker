@@ -127,4 +127,19 @@
   html {
     @apply font-sans;
   }
+  /* Restore cursor: pointer on interactive elements (Tailwind v4 / shadcn default removed it) */
+  button:not(:disabled),
+  [role="button"]:not(:disabled),
+  [role="menuitem"]:not(:disabled),
+  [role="option"]:not(:disabled),
+  [role="tab"]:not(:disabled),
+  [role="switch"]:not(:disabled),
+  [role="checkbox"]:not(:disabled),
+  [role="radio"]:not(:disabled),
+  summary,
+  label[for],
+  select:not(:disabled),
+  a[href] {
+    cursor: pointer;
+  }
 }

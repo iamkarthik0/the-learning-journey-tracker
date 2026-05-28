@@ -1,10 +1,10 @@
 'use client';
 
 import { useActionState } from 'react';
-import { createSchool, type ActionState } from '@/lib/actions/user-actions';
+import { createSchool, type SchoolFormState } from '@/lib/actions/school-actions';
 
 export function SchoolForm() {
-  const [state, formAction, isPending] = useActionState<ActionState | null, FormData>(
+  const [state, formAction, isPending] = useActionState<SchoolFormState | null, FormData>(
     createSchool,
     null
   );

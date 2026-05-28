@@ -1,0 +1,1 @@
+ALTER TABLE `attendance_sessions` DROP COLUMN `session_date`;
