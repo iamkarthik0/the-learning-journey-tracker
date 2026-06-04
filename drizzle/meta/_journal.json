@@ -64,6 +64,20 @@
       "when": 1779870704185,
       "tag": "0008_organic_chamber",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1780560748977,
+      "tag": "0009_sticky_vengeance",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1780569236068,
+      "tag": "0010_black_rocket_raccoon",
+      "breakpoints": true
     }
   ]
 }

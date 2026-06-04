@@ -211,3 +211,36 @@ export async function getAllAttendance() {
     return [];
   }
 }
+
+// Get attendance statistics for today
+export async function getAttendanceStats() {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const allStudents = await studentAdapter.findAll();
+    const activeStudents = allStudents.filter((s) => s.status === 'active');
+    const totalStudents = activeStudents.length;
+
+    const todayRecords = await getAttendanceByDate(today);
+    const presentToday = todayRecords.filter((r) => r.status === 'present').length;
+    const absentToday = todayRecords.filter((r) => r.status === 'absent').length;
+
+    const attendanceRate = totalStudents > 0 
+      ? Math.round((presentToday / totalStudents) * 100) 
+      : 0;
+
+    return {
+      totalStudents,
+      presentToday,
+      absentToday,
+      attendanceRate,
+    };
+  } catch (error) {
+    console.error('Error fetching attendance stats:', error);
+    return {
+      totalStudents: 0,
+      presentToday: 0,
+      absentToday: 0,
+      attendanceRate: 0,
+    };
+  }
+}

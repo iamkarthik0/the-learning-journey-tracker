@@ -9,6 +9,9 @@ import {
   PlusSquare,
   GraduationCap,
   ClipboardCheck,
+  BookOpen,
+  CalendarCheck,
+  BarChart3,
 } from "lucide-react"
 
 import {
@@ -52,6 +55,16 @@ const data = {
       icon: LayoutDashboard,
     },
     {
+      title: "Teacher",
+      url: "/dashboard/teacher",
+      icon: BookOpen,
+    },
+    {
+      title: "Daily Log",
+      url: "/dashboard/daily-log",
+      icon: CalendarCheck,
+    },
+    {
       title: "Create",
       url: "/dashboard/create",
       icon: PlusSquare,
@@ -60,6 +73,11 @@ const data = {
       title: "Students",
       url: "/dashboard/students",
       icon: GraduationCap,
+    },
+    {
+      title: "Analytics",
+      url: "/dashboard/analytics",
+      icon: BarChart3,
     },
     {
       title: "Attendance",

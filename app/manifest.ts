@@ -6,7 +6,9 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: 'LJ Tracker',
     description:
       'Track student attendance, manage learning progress, and review records in style.',
-    start_url: '/',
+    start_url: '/dashboard',
+    scope: '/',
+    id: '/dashboard',
     display: 'standalone',
     orientation: 'any',
     background_color: '#ffffff',

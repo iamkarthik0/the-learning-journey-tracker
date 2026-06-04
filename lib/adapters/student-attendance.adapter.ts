@@ -76,6 +76,15 @@ class StudentAttendanceAdapter {
     return record;
   }
 
+  // Saare records ek student ke liye (analytics ke liye)
+  async findAllByStudentId(student_id: string): Promise<StudentAttendanceRecord[]> {
+    const db = getDb();
+    return await db
+      .select()
+      .from(studentAttendance)
+      .where(eq(studentAttendance.student_id, student_id));
+  }
+
   async update(
     attendance_id: string,
     data: {

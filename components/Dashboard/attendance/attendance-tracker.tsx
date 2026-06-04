@@ -14,7 +14,7 @@ import {
 import { toast } from 'sonner';
 import { getStudentsByGradeWithAttendance, getStudentsByGradeAndSectionWithAttendance, getSectionsByGrade, getAllSubjects, saveAttendance, getAttendanceByStudentIdAndDate } from '@/lib/actions/student-attendance-actions';
 import { getStudentById } from '@/lib/actions/student-actions';
-import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Check, CheckCircle2, XCircle, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type Student = {
@@ -86,7 +86,6 @@ export function AttendanceTracker({ editingRecord, onSaveComplete, onRecordSaved
       }
       const sections = await getSectionsByGrade(selectedGrade);
       setAvailableSections(sections);
-      // Reset section when grade changes
       setSelectedSection('');
     };
     fetchSections();
@@ -99,7 +98,6 @@ export function AttendanceTracker({ editingRecord, onSaveComplete, onRecordSaved
         setIsLoading(true);
         setIsEditMode(true);
 
-        // Fetch the student details
         const student = await getStudentById(editingRecord.student_id);
         
         if (!student) {
@@ -108,21 +106,18 @@ export function AttendanceTracker({ editingRecord, onSaveComplete, onRecordSaved
           return;
         }
 
-        // Set the grade and section, then start
         setSelectedGrade(student.grade_level || '');
         setSelectedSection(student.section || '');
         setStudents([student]);
         setIsStarted(true);
         setCurrentStudentIndex(0);
 
-        // Parse subject_status
         const subjectStatus = editingRecord.subject_status
           ? (typeof editingRecord.subject_status === 'string'
               ? JSON.parse(editingRecord.subject_status)
               : editingRecord.subject_status)
           : [];
 
-        // Set attendance data
         setAttendanceData({
           [student.student_id]: {
             status: editingRecord.status,
@@ -133,7 +128,6 @@ export function AttendanceTracker({ editingRecord, onSaveComplete, onRecordSaved
         setIsLoading(false);
         toast.info('Editing attendance record');
       } else {
-        // Reset edit mode
         if (isEditMode) {
           setIsEditMode(false);
           setIsStarted(false);
@@ -161,7 +155,6 @@ export function AttendanceTracker({ editingRecord, onSaveComplete, onRecordSaved
 
     setIsLoading(true);
 
-    // Use section-aware fetch when sections exist for the grade
     const fetchedStudents = selectedSection
       ? await getStudentsByGradeAndSectionWithAttendance(selectedGrade, selectedSection)
       : await getStudentsByGradeWithAttendance(selectedGrade);
@@ -176,7 +169,6 @@ export function AttendanceTracker({ editingRecord, onSaveComplete, onRecordSaved
       return;
     }
 
-    // Check if ALL students of this grade+section already have attendance for today
     const allMarked = fetchedStudents.every((s) => s.hasAttendanceToday);
     if (allMarked) {
       const scope = selectedSection
@@ -187,7 +179,6 @@ export function AttendanceTracker({ editingRecord, onSaveComplete, onRecordSaved
         { duration: 5000 }
       );
       setIsLoading(false);
-      // Reset and close dialog
       setSelectedGrade('');
       setSelectedSection('');
       setIsStarted(false);
@@ -195,27 +186,19 @@ export function AttendanceTracker({ editingRecord, onSaveComplete, onRecordSaved
       return;
     }
 
-    // Sort students by roll number in ascending order
     const sortedStudents = fetchedStudents.sort((a, b) => a.roll_number - b.roll_number);
-
-    // Filter subjects by selected grade
-    const gradeSubjects = allSubjects.filter(
-      (subject) => subject.grade_level === selectedGrade
-    );
+    const gradeSubjects = allSubjects.filter((subject) => subject.grade_level === selectedGrade);
 
     setStudents(sortedStudents);
     setIsStarted(true);
     setCurrentStudentIndex(0);
 
-    // Initialize attendance data for all students
     const initialData: typeof attendanceData = {};
     const today = new Date().toISOString().split('T')[0];
 
     for (const student of sortedStudents) {
-      // Try to fetch existing attendance for today
       const existingAttendance = await getAttendanceByStudentIdAndDate(student.student_id, today);
 
-      // If existing attendance has subject_status, use it; otherwise auto-attach all grade subjects
       let subjectStatus: SubjectStatus[] = [];
 
       if (existingAttendance?.subject_status) {
@@ -223,7 +206,6 @@ export function AttendanceTracker({ editingRecord, onSaveComplete, onRecordSaved
           ? JSON.parse(existingAttendance.subject_status)
           : existingAttendance.subject_status;
       } else {
-        // Auto-attach all subjects of this grade
         subjectStatus = gradeSubjects.map((subject) => ({
           subject_id: subject.subject_id,
           is_completed: true,
@@ -265,9 +247,7 @@ export function AttendanceTracker({ editingRecord, onSaveComplete, onRecordSaved
     if (!currentStudent) return;
 
     const currentData = attendanceData[currentStudent.student_id];
-    const alreadyExists = currentData.subject_status.some(
-      (s) => s.subject_id === subject_id
-    );
+    const alreadyExists = currentData.subject_status.some((s) => s.subject_id === subject_id);
 
     if (alreadyExists) {
       toast.error('Subject already attached');
@@ -308,18 +288,15 @@ export function AttendanceTracker({ editingRecord, onSaveComplete, onRecordSaved
       student_id: currentStudent.student_id,
       status: data.status,
       subject_status: data.subject_status,
-      attendance_date: editingRecord?.attendance_date, // Use existing date if editing
+      attendance_date: editingRecord?.attendance_date,
     });
 
     if (result.success) {
       toast.success(result.message);
-      // Notify parent that a record was saved (so table can refresh live)
       onRecordSaved?.();
       
-      // If in edit mode, call onSaveComplete and exit
       if (isEditMode && onSaveComplete) {
         onSaveComplete();
-        // Reset state
         setIsEditMode(false);
         setIsStarted(false);
         setSelectedGrade('');
@@ -330,15 +307,12 @@ export function AttendanceTracker({ editingRecord, onSaveComplete, onRecordSaved
         return;
       }
       
-      // Move to next student (normal mode)
       if (currentStudentIndex < students.length - 1) {
         setCurrentStudentIndex(currentStudentIndex + 1);
       } else {
-        // All students completed - notify parent and close
         toast.success('All students completed!');
         onSaveComplete?.();
         
-        // Reset to initial state
         setIsStarted(false);
         setCurrentStudentIndex(0);
         setStudents([]);
@@ -381,21 +355,40 @@ export function AttendanceTracker({ editingRecord, onSaveComplete, onRecordSaved
 
   if (!isStarted) {
     return (
-      <Card className={cn("w-full", className)}>
-        <CardHeader>
-          <CardTitle>Start Attendance Tracking</CardTitle>
-          <CardDescription>Select grade and section to begin</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Grade Level</label>
+      <div className={cn("w-full", className)}>
+        {/* Header */}
+        <div className="rounded-t-xl border border-b-0 bg-muted/40 p-6 sm:p-8">
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full border bg-background px-3 py-1">
+            <div className="h-2 w-2 animate-pulse rounded-full bg-primary" />
+            <span className="text-xs font-medium text-muted-foreground">
+              Ready to Start
+            </span>
+          </div>
+          <h2 className="mb-2 text-2xl font-bold tracking-tight sm:text-3xl">
+            Start Attendance Tracking
+          </h2>
+          <p className="text-sm text-muted-foreground sm:text-base">
+            Select grade and section to begin marking attendance
+          </p>
+        </div>
+
+        {/* Content */}
+        <div className="space-y-6 rounded-b-xl border border-t-0 bg-card p-6 sm:p-8">
+          {/* Grade Selection */}
+          <div className="space-y-3">
+            <label className="flex items-center gap-2 text-sm font-medium">
+              <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-xs font-bold text-primary-foreground">
+                1
+              </div>
+              Grade Level
+            </label>
             <Select value={selectedGrade} onValueChange={setSelectedGrade}>
-              <SelectTrigger className="w-full">
+              <SelectTrigger className="h-12 w-full text-sm sm:text-base">
                 <SelectValue placeholder="Select Grade" />
               </SelectTrigger>
               <SelectContent>
                 {grades.map((grade) => (
-                  <SelectItem key={grade} value={grade}>
+                  <SelectItem key={grade} value={grade} className="text-sm sm:text-base">
                     Grade {grade}
                   </SelectItem>
                 ))}
@@ -403,24 +396,31 @@ export function AttendanceTracker({ editingRecord, onSaveComplete, onRecordSaved
             </Select>
           </div>
 
+          {/* Section Selection */}
           {selectedGrade && (
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Section</label>
+            <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+              <label className="flex items-center gap-2 text-sm font-medium">
+                <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-xs font-bold text-primary-foreground">
+                  2
+                </div>
+                Section
+              </label>
               {availableSections.length === 0 ? (
-                <p className="text-xs text-muted-foreground italic">
-                  No sections found for Grade {selectedGrade}. Will load all students.
-                </p>
+                <div className="rounded-lg border border-dashed bg-muted/40 p-4">
+                  <p className="mb-1 text-sm font-medium">No sections available</p>
+                  <p className="text-xs text-muted-foreground">
+                    No sections found for Grade {selectedGrade}. All students will
+                    be loaded.
+                  </p>
+                </div>
               ) : (
-                <Select
-                  value={selectedSection}
-                  onValueChange={setSelectedSection}
-                >
-                  <SelectTrigger className="w-full">
+                <Select value={selectedSection} onValueChange={setSelectedSection}>
+                  <SelectTrigger className="h-12 w-full text-sm sm:text-base">
                     <SelectValue placeholder="Select Section" />
                   </SelectTrigger>
                   <SelectContent>
                     {availableSections.map((section) => (
-                      <SelectItem key={section} value={section}>
+                      <SelectItem key={section} value={section} className="text-sm sm:text-base">
                         Section {section}
                       </SelectItem>
                     ))}
@@ -430,29 +430,37 @@ export function AttendanceTracker({ editingRecord, onSaveComplete, onRecordSaved
             </div>
           )}
 
+          {/* Start Button */}
           <Button
             onClick={handleStart}
-            disabled={
-              !selectedGrade ||
-              isLoading ||
-              (availableSections.length > 0 && !selectedSection)
-            }
-            className="w-full"
+            disabled={!selectedGrade || isLoading || (availableSections.length > 0 && !selectedSection)}
+            size="lg"
+            className="mt-2 w-full"
           >
-            {isLoading ? 'Loading...' : 'Start Attendance'}
+            {isLoading ? (
+              <div className="flex items-center gap-2">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                Loading Students...
+              </div>
+            ) : (
+              'Start Attendance'
+            )}
           </Button>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   }
 
   if (!currentStudent || !attendanceData[currentStudent.student_id]) {
     return (
-      <Card className={cn("w-full", className)}>
-        <CardContent className="py-8">
-          <p className="text-center text-muted-foreground">Loading student data...</p>
-        </CardContent>
-      </Card>
+      <div className={cn("w-full rounded-xl border bg-card", className)}>
+        <div className="flex flex-col items-center justify-center gap-4 py-16 sm:py-20">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-muted border-t-primary" />
+          <p className="text-center text-sm font-medium text-muted-foreground sm:text-base">
+            Loading student data...
+          </p>
+        </div>
+      </div>
     );
   }
 
@@ -462,81 +470,119 @@ export function AttendanceTracker({ editingRecord, onSaveComplete, onRecordSaved
   };
 
   return (
-    <Card className={cn("w-full", className)}>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle>
-              {isEditMode && <Badge variant="secondary" className="mr-2">Editing</Badge>}
-              {currentStudent.full_name} (Roll #{currentStudent.roll_number})
-            </CardTitle>
-            <CardDescription>
-              Grade {currentStudent.grade_level} - Section {currentStudent.section}
-            </CardDescription>
+    <div className={cn("w-full", className)}>
+      {/* Student Header */}
+      <div className="rounded-t-xl border border-b-0 bg-muted/40 p-6 sm:p-8">
+        <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0 flex-1">
+            {isEditMode && (
+              <Badge variant="secondary" className="mb-2">
+                Editing
+              </Badge>
+            )}
+            <h2 className="mb-2 truncate text-2xl font-bold tracking-tight sm:text-3xl">
+              {currentStudent.full_name}
+            </h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline">Roll #{currentStudent.roll_number}</Badge>
+              <Badge variant="outline">Grade {currentStudent.grade_level}</Badge>
+              {currentStudent.section && (
+                <Badge variant="outline">Section {currentStudent.section}</Badge>
+              )}
+            </div>
           </div>
-          <Badge variant="outline">
-            {isEditMode ? 'Edit Mode' : `${currentStudentIndex + 1} / ${students.length}`}
-          </Badge>
+          <div className="shrink-0">
+            <Badge variant="secondary" className="px-3 py-1.5 text-sm">
+              {isEditMode
+                ? 'Edit Mode'
+                : `${currentStudentIndex + 1} / ${students.length}`}
+            </Badge>
+          </div>
         </div>
-      </CardHeader>
+      </div>
 
-      <CardContent className="space-y-6">
+      {/* Content */}
+      <div className="space-y-6 rounded-b-xl border border-t-0 bg-card p-6 sm:p-8 sm:space-y-8">
         {/* Attendance Status */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Attendance Status</label>
-          <div className="flex gap-4">
-            <Button
-              variant={currentData.status === 'present' ? 'default' : 'outline'}
+        <div className="space-y-4">
+          <div className="mb-2 flex items-center gap-2">
+            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
+              <Check className="h-4 w-4" />
+            </div>
+            <label className="text-base font-semibold">Attendance Status</label>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            <button
               onClick={() => handleStatusChange('present')}
-              className="flex-1"
+              className={cn(
+                "flex h-16 flex-col items-center justify-center gap-1 rounded-lg border text-sm font-semibold transition-all sm:h-20 sm:text-base",
+                currentData.status === 'present'
+                  ? "border-emerald-600 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                  : "bg-card hover:bg-accent"
+              )}
             >
-              Present
-            </Button>
-            <Button
-              variant={currentData.status === 'absent' ? 'destructive' : 'outline'}
+              <CheckCircle2 className="h-5 w-5" />
+              <span>Present</span>
+            </button>
+            <button
               onClick={() => handleStatusChange('absent')}
-              className="flex-1"
+              className={cn(
+                "flex h-16 flex-col items-center justify-center gap-1 rounded-lg border text-sm font-semibold transition-all sm:h-20 sm:text-base",
+                currentData.status === 'absent'
+                  ? "border-rose-600 bg-rose-500/10 text-rose-700 dark:text-rose-400"
+                  : "bg-card hover:bg-accent"
+              )}
             >
-              Absent
-            </Button>
+              <XCircle className="h-5 w-5" />
+              <span>Absent</span>
+            </button>
           </div>
         </div>
 
         {/* Subjects Attached */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <label className="text-sm font-medium">Subjects Attached</label>
-            <Badge variant="outline" className="text-xs">
+        <div className="space-y-4">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
+                <BookOpen className="h-4 w-4" />
+              </div>
+              <label className="text-base font-semibold">Subjects</label>
+            </div>
+            <Badge variant="secondary" className="text-xs sm:text-sm">
               {currentData.subject_status.length} attached
             </Badge>
           </div>
 
-          {/* Current Subjects (no toggle, only remove) */}
           {currentData.subject_status.length === 0 ? (
-            <div className="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground">
-              No subjects attached. Add from the dropdown below.
+            <div className="rounded-lg border border-dashed bg-muted/40 p-6 text-center">
+              <p className="mb-1 text-sm font-medium">No subjects attached</p>
+              <p className="text-xs text-muted-foreground">
+                Add subjects from the dropdown below
+              </p>
             </div>
           ) : (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 sm:gap-3">
               {currentData.subject_status.map((subjectStatus) => {
                 const color = getSubjectColor(subjectStatus.subject_id);
                 const name = getSubjectName(subjectStatus.subject_id);
                 return (
                   <div
                     key={subjectStatus.subject_id}
-                    className="group inline-flex items-center gap-1.5 rounded-md border pl-2.5 pr-1 py-1 text-sm transition-colors"
+                    className="inline-flex items-center gap-2 rounded-lg border py-1.5 pl-3 pr-1.5 text-xs font-medium sm:text-sm"
                     style={{
                       borderColor: color,
-                      backgroundColor: color + '15',
+                      backgroundColor: color + '18',
                       color: color,
                     }}
                   >
-                    <span className="font-medium">{name}</span>
+                    <span className="max-w-[120px] truncate sm:max-w-none">
+                      {name}
+                    </span>
                     <button
                       type="button"
                       onClick={() => handleRemoveSubject(subjectStatus.subject_id)}
                       aria-label={`Remove ${name}`}
-                      className="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-sm transition-colors hover:bg-foreground/10"
+                      className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded transition-colors hover:bg-foreground/10"
                       style={{ color }}
                     >
                       <X className="h-3.5 w-3.5" />
@@ -547,20 +593,19 @@ export function AttendanceTracker({ editingRecord, onSaveComplete, onRecordSaved
             </div>
           )}
 
-          {/* Add Subject Dropdown - Only show if there are subjects to add */}
           {(() => {
             const availableSubjects = allSubjects.filter(
               (subject) =>
                 subject.grade_level === selectedGrade &&
-                !currentData.subject_status.some(
-                  (s) => s.subject_id === subject.subject_id
-                )
+                !currentData.subject_status.some((s) => s.subject_id === subject.subject_id)
             );
             if (availableSubjects.length === 0) {
               return (
-                <p className="text-xs text-muted-foreground italic">
-                  All grade subjects attached
-                </p>
+                <div className="rounded-lg bg-muted/50 p-3 text-center">
+                  <p className="text-xs font-medium text-muted-foreground sm:text-sm">
+                    All grade subjects attached
+                  </p>
+                </div>
               );
             }
             return (
@@ -570,23 +615,20 @@ export function AttendanceTracker({ editingRecord, onSaveComplete, onRecordSaved
                   if (value) handleAddSubject(value);
                 }}
               >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="+ Add subject..." />
+                <SelectTrigger className="h-12 w-full text-sm sm:text-base">
+                  <SelectValue placeholder="Add subject..." />
                 </SelectTrigger>
                 <SelectContent>
                   {availableSubjects.map((subject) => (
-                    <SelectItem
-                      key={subject.subject_id}
-                      value={subject.subject_id}
-                    >
-                      <div className="flex items-center gap-2">
+                    <SelectItem key={subject.subject_id} value={subject.subject_id} className="text-sm sm:text-base">
+                      <div className="flex items-center gap-2.5">
                         <span
-                          className="h-2 w-2 rounded-full"
+                          className="h-3 w-3 shrink-0 rounded-full"
                           style={{
                             backgroundColor: subject.color_code || '#6b7280',
                           }}
                         />
-                        {subject.subject_name}
+                        <span className="truncate font-medium">{subject.subject_name}</span>
                       </div>
                     </SelectItem>
                   ))}
@@ -595,23 +637,29 @@ export function AttendanceTracker({ editingRecord, onSaveComplete, onRecordSaved
             );
           })()}
 
-          <p className="text-xs text-muted-foreground">
-            Click <X className="inline h-3 w-3" /> to remove a subject
-          </p>
+          <div className="flex items-center gap-2 rounded-lg bg-muted/30 p-3 text-xs text-muted-foreground">
+            <X className="h-3.5 w-3.5 shrink-0" />
+            <span>Click the × button to remove a subject</span>
+          </div>
         </div>
 
         {/* Navigation Buttons */}
-        <div className="flex gap-2 pt-4">
+        <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:pt-6">
           {isEditMode ? (
             <>
               <Button
                 variant="outline"
                 onClick={handleCancelEdit}
-                className="flex-1"
+                size="lg"
+                className="order-2 w-full sm:order-1 sm:flex-1"
               >
                 Cancel
               </Button>
-              <Button onClick={handleSaveAndNext} className="flex-1">
+              <Button
+                onClick={handleSaveAndNext}
+                size="lg"
+                className="order-1 w-full sm:order-2 sm:flex-1"
+              >
                 Save Changes
               </Button>
             </>
@@ -621,19 +669,30 @@ export function AttendanceTracker({ editingRecord, onSaveComplete, onRecordSaved
                 variant="outline"
                 onClick={handlePrevious}
                 disabled={currentStudentIndex === 0}
-                className="flex-1"
+                size="lg"
+                className="w-full sm:flex-1"
               >
-                <ChevronLeft className="w-4 h-4 mr-2" />
+                <ChevronLeft className="mr-1 h-5 w-5" />
                 Previous
               </Button>
-              <Button onClick={handleSaveAndNext} className="flex-1">
-                {currentStudentIndex === students.length - 1 ? 'Save & Finish' : 'Save & Next'}
-                <ChevronRight className="w-4 h-4 ml-2" />
+              <Button
+                onClick={handleSaveAndNext}
+                size="lg"
+                className="w-full sm:flex-1"
+              >
+                {currentStudentIndex === students.length - 1 ? (
+                  'Save & Finish'
+                ) : (
+                  <>
+                    Save & Next
+                    <ChevronRight className="ml-1 h-5 w-5" />
+                  </>
+                )}
               </Button>
             </>
           )}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

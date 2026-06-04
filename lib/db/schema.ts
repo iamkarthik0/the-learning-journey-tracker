@@ -44,6 +44,37 @@ export const subjects = sqliteTable('subjects', {
   created_at: text('created_at').default(sql`CURRENT_TIMESTAMP`),
 });
 
+// CHAPTERS - Chapter info with timeline, completion status aur questions (JSON array)
+export const chapters = sqliteTable('chapters', {
+  chapter_id: text('chapter_id').primaryKey(),
+  subject_id: text('subject_id')
+    .notNull()
+    .references(() => subjects.subject_id),
+  chapter_name: text('chapter_name').notNull(), // e.g., "Algebra Basics"
+  section: text('section'), // e.g., "A", "B" - kis section ke liye chapter hai
+
+  // TIMELINE DATA - Chapter ka narrative track karne ke liye
+  start_date: text('start_date').default(sql`CURRENT_DATE`),
+  end_date: text('end_date'), // Jab teacher 'Finish Chapter' click kare
+
+  // COMPLETION STATUS - 0 = In Progress, 1 = Completed
+  is_completed: integer('is_completed', { mode: 'boolean' }).default(false),
+
+  // SEQUENCE & AI
+  order_index: integer('order_index'), // Ch 1, Ch 2... ka sahi sequence
+  ai_context_key: text('ai_context_key'), // Future AI/PDF memory ke liye
+
+  // QUESTIONS ARRAY (JSON) - [{ text, is_completed }]
+  // is_completed batata hai ki teacher ne wo question class me padha diya hai ya nahi
+  questions: text('questions', { mode: 'json' })
+    .$type<Array<{ text: string; is_completed: boolean; taught_date?: string | null }>>()
+    .notNull()
+    .default([]),
+
+  created_at: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+  updated_at: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
+});
+
 
 
 

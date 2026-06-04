@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -6,56 +6,51 @@ import { Toaster } from "sonner";
 import { Inter } from "next/font/google";
 import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/theme-provider";
+import { PwaServiceWorker } from "@/components/pwa-service-worker";
+import { PwaInstallPrompt } from "@/components/pwa-install-prompt";
 
 
 
 
 // Local Inter font from public/webfonts (weights 100-700)
-const inter = localFont({
-  src: [
-    {
-      path: '/webfonts/inter-latin-100-normal.woff2',
-      weight: '100',
-      style: 'normal',
-    },
-    {
-      path: '/webfonts/inter-latin-200-normal.woff2',
-      weight: '200',
-      style: 'normal',
-    },
-    {
-      path: '/webfonts/inter-latin-300-normal.woff2',
-      weight: '300',
-      style: 'normal',
-    },
-    {
-      path: '/webfonts/inter-latin-400-normal.woff2',
-      weight: '400',
-      style: 'normal',
-    },
-    {
-      path: '/webfonts/inter-latin-500-normal.woff2',
-      weight: '500',
-      style: 'normal',
-    },
-    {
-      path: '/webfonts/inter-latin-600-normal.woff2',
-      weight: '600',
-      style: 'normal',
-    },
-    {
-      path: '/webfonts/inter-latin-700-normal.woff2',
-      weight: '700',
-      style: 'normal',
-    },
-  ],
-  variable: '--font-sans',
-  display: 'swap',
-});
+const inter = Inter({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
-  title: "The Learning Journey Tracker",
-  description: "Track your learning journey with style",
+  title: {
+    default: "The Learning Journey Tracker",
+    template: "%s · LJ Tracker",
+  },
+  description:
+    "Track student attendance, manage learning progress, and review records in style.",
+  applicationName: "LJ Tracker",
+  appleWebApp: {
+    capable: true,
+    title: "LJ Tracker",
+    statusBarStyle: "default",
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  icons: {
+    icon: [
+      { url: "/icons/favicon-16.png", sizes: "16x16", type: "image/png" },
+      { url: "/icons/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icons/icon.svg", type: "image/svg+xml" },
+    ],
+    apple: [
+      { url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+  ],
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 export default function RootLayout({
@@ -93,6 +88,8 @@ export default function RootLayout({
           <TooltipProvider>
             {children}
             <Toaster position="top-right" richColors />
+            <PwaServiceWorker />
+            <PwaInstallPrompt />
           </TooltipProvider>
         </ThemeProvider>
       </body>

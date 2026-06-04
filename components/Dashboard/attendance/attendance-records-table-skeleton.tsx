@@ -56,8 +56,8 @@ export function AttendanceRecordsTableSkeleton() {
         </CardHeader>
 
         <CardContent>
-          {/* Mobile card skeleton */}
-          <div className="space-y-3 md:hidden">
+          {/* Mobile + tablet card skeleton */}
+          <div className="space-y-3 lg:hidden">
             {Array.from({ length: 5 }).map((_, i) => (
               <div key={i} className="rounded-lg border bg-card p-4 shadow-sm">
                 <div className="flex items-start justify-between">
@@ -81,7 +81,7 @@ export function AttendanceRecordsTableSkeleton() {
           </div>
 
           {/* Desktop table skeleton */}
-          <div className="hidden md:block">
+          <div className="hidden lg:block">
             <div className="rounded-lg border overflow-hidden">
               <div className="grid grid-cols-7 gap-4 border-b bg-muted/40 px-4 py-3">
                 {Array.from({ length: 7 }).map((_, i) => (

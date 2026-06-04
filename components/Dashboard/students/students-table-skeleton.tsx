@@ -41,8 +41,8 @@ export function StudentsTableSkeleton() {
         </CardHeader>
 
         <CardContent>
-          {/* Mobile card skeleton */}
-          <div className="space-y-3 md:hidden">
+          {/* Mobile + tablet card skeleton */}
+          <div className="space-y-3 lg:hidden">
             {Array.from({ length: 5 }).map((_, i) => (
               <div
                 key={i}
@@ -64,7 +64,7 @@ export function StudentsTableSkeleton() {
           </div>
 
           {/* Desktop table skeleton */}
-          <div className="hidden md:block">
+          <div className="hidden lg:block">
             <div className="rounded-lg border overflow-hidden">
               {/* Header */}
               <div className="grid grid-cols-7 gap-4 border-b bg-muted/40 px-4 py-3">

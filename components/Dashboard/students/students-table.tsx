@@ -1,11 +1,9 @@
 'use client';
 
 import { useEffect, useMemo, useState, useTransition } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
-  Search,
-  Filter,
   Pencil,
-  X,
   Users,
 } from 'lucide-react';
 import { getStudents } from '@/lib/actions/student-actions';
@@ -62,25 +60,36 @@ const GRADES = [
 ];
 
 type StudentsTableProps = {
+  initialStudents: Student[];
   onEdit?: (student: Student) => void;
   refreshKey?: number;
+  search: string;
+  gradeFilter: string;
+  sectionFilter: string;
 };
 
-export function StudentsTable({ onEdit, refreshKey }: StudentsTableProps) {
-  const [students, setStudents] = useState<Student[]>([]);
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
+export function StudentsTable({ 
+  initialStudents, 
+  onEdit, 
+  refreshKey,
+  search,
+  gradeFilter,
+  sectionFilter
+}: StudentsTableProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [students, setStudents] = useState<Student[]>(initialStudents);
+  const [isInitialLoading, setIsInitialLoading] = useState(false);
   const [, startTransition] = useTransition();
-
-  const [search, setSearch] = useState('');
-  const [gradeFilter, setGradeFilter] = useState<string>('all');
-  const [sectionFilter, setSectionFilter] = useState<string>('all');
-  const [rollFilter, setRollFilter] = useState('');
 
   // Pagination
   const [pageSize, setPageSize] = useState<number>(10);
   const [currentPage, setCurrentPage] = useState(1);
 
+  // Only refetch when refreshKey changes (after add/edit)
   useEffect(() => {
+    if (refreshKey === 0) return; // Skip initial mount
+    
     let cancelled = false;
     const loadStudents = async () => {
       const data = await getStudents();
@@ -93,7 +102,6 @@ export function StudentsTable({ onEdit, refreshKey }: StudentsTableProps) {
       });
       startTransition(() => {
         setStudents(sorted);
-        setIsInitialLoading(false);
       });
     };
     loadStudents();
@@ -113,27 +121,25 @@ export function StudentsTable({ onEdit, refreshKey }: StudentsTableProps) {
 
   const filteredStudents = useMemo(() => {
     return students.filter((s) => {
-      // Name search
+      // Combined search - Name OR Roll Number
       if (search.trim()) {
         const q = search.trim().toLowerCase();
-        if (!s.full_name.toLowerCase().includes(q)) return false;
+        const nameMatch = s.full_name.toLowerCase().includes(q);
+        const rollMatch = String(s.roll_number).includes(q);
+        if (!nameMatch && !rollMatch) return false;
       }
       // Grade filter
-      if (gradeFilter !== 'all' && s.grade_level !== gradeFilter) return false;
+      if (gradeFilter && gradeFilter !== 'all' && s.grade_level !== gradeFilter) return false;
       // Section filter
-      if (sectionFilter !== 'all' && s.section !== sectionFilter) return false;
-      // Roll number filter
-      if (rollFilter.trim()) {
-        if (!String(s.roll_number).includes(rollFilter.trim())) return false;
-      }
+      if (sectionFilter && sectionFilter !== 'all' && s.section !== sectionFilter) return false;
       return true;
     });
-  }, [students, search, gradeFilter, sectionFilter, rollFilter]);
+  }, [students, search, gradeFilter, sectionFilter]);
 
   // Reset to page 1 whenever filters or page size change
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, gradeFilter, sectionFilter, rollFilter, pageSize]);
+  }, [search, gradeFilter, sectionFilter, pageSize]);
 
   // Pagination computations
   const totalPages = Math.max(1, Math.ceil(filteredStudents.length / pageSize));
@@ -165,25 +171,8 @@ export function StudentsTable({ onEdit, refreshKey }: StudentsTableProps) {
 
   const hasActiveFilters =
     search.trim() ||
-    gradeFilter !== 'all' ||
-    sectionFilter !== 'all' ||
-    rollFilter.trim();
-
-  const clearFilters = () => {
-    setSearch('');
-    setGradeFilter('all');
-    setSectionFilter('all');
-    setRollFilter('');
-  };
-
-  // Stats
-  const stats = useMemo(() => {
-    const total = students.length;
-    const active = students.filter((s) => s.status === 'active').length;
-    const inactive = total - active;
-    const grades = new Set(students.map((s) => s.grade_level).filter(Boolean));
-    return { total, active, inactive, grades: grades.size };
-  }, [students]);
+    (gradeFilter && gradeFilter !== 'all') ||
+    (sectionFilter && sectionFilter !== 'all');
 
   // Show full skeleton on initial load to prevent layout shift
   if (isInitialLoading) {
@@ -192,55 +181,6 @@ export function StudentsTable({ onEdit, refreshKey }: StudentsTableProps) {
 
   return (
     <div className="space-y-6">
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
-        <Card className="border-l-4 border-l-blue-500">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Total
-                </p>
-                <p className="text-2xl font-bold mt-1">{stats.total}</p>
-              </div>
-              <div className="rounded-full bg-blue-500/10 p-2">
-                <Users className="h-5 w-5 text-blue-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-l-4 border-l-emerald-500">
-          <CardContent className="p-4">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Active
-            </p>
-            <p className="text-2xl font-bold mt-1 text-emerald-600 dark:text-emerald-400">
-              {stats.active}
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="border-l-4 border-l-amber-500">
-          <CardContent className="p-4">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Inactive
-            </p>
-            <p className="text-2xl font-bold mt-1 text-amber-600 dark:text-amber-400">
-              {stats.inactive}
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="border-l-4 border-l-purple-500">
-          <CardContent className="p-4">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Grades
-            </p>
-            <p className="text-2xl font-bold mt-1 text-purple-600 dark:text-purple-400">
-              {stats.grades}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Main Table Card */}
       <Card>
         <CardHeader>
@@ -255,72 +195,6 @@ export function StudentsTable({ onEdit, refreshKey }: StudentsTableProps) {
               </CardDescription>
             </div>
           </div>
-
-          {/* Filters */}
-          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search by name..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-
-            <div className="relative">
-              <Input
-                type="number"
-                placeholder="Roll number..."
-                value={rollFilter}
-                onChange={(e) => setRollFilter(e.target.value)}
-              />
-            </div>
-
-            <Select value={gradeFilter} onValueChange={setGradeFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="All grades" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Grades</SelectItem>
-                {GRADES.map((g) => (
-                  <SelectItem key={g} value={g}>
-                    Grade {g}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={sectionFilter} onValueChange={setSectionFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="All sections" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Sections</SelectItem>
-                {availableSections.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    Section {s}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {hasActiveFilters && (
-            <div className="mt-3 flex items-center gap-2">
-              <Filter className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">Filters active</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={clearFilters}
-                className="h-7 px-2 text-xs"
-              >
-                <X className="mr-1 h-3 w-3" />
-                Clear
-              </Button>
-            </div>
-          )}
         </CardHeader>
 
         <CardContent>
@@ -335,21 +209,12 @@ export function StudentsTable({ onEdit, refreshKey }: StudentsTableProps) {
                   ? 'Create your first student using the form above'
                   : 'Try adjusting your filters'}
               </p>
-              {hasActiveFilters && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={clearFilters}
-                  className="mt-4"
-                >
-                  Clear filters
-                </Button>
-              )}
+
             </div>
           ) : (
             <>
-              {/* Mobile card view */}
-              <div className="space-y-3 md:hidden">
+              {/* Mobile + tablet card view */}
+              <div className="space-y-3 lg:hidden">
                 {paginatedStudents.map((student) => (
                   <div
                     key={student.student_id}
@@ -389,7 +254,7 @@ export function StudentsTable({ onEdit, refreshKey }: StudentsTableProps) {
               </div>
 
               {/* Desktop table view */}
-              <div className="hidden md:block">
+              <div className="hidden lg:block">
                 <div className="rounded-lg border overflow-hidden">
                   <Table>
                     <TableHeader>
@@ -437,12 +302,7 @@ export function StudentsTable({ onEdit, refreshKey }: StudentsTableProps) {
                               variant={
                                 student.status === 'active'
                                   ? 'default'
-                                  : 'outline'
-                              }
-                              className={
-                                student.status === 'active'
-                                  ? 'bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/20 border-emerald-500/30 dark:text-emerald-400'
-                                  : ''
+                                  : 'secondary'
                               }
                             >
                               {student.status}
@@ -450,7 +310,11 @@ export function StudentsTable({ onEdit, refreshKey }: StudentsTableProps) {
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">
                             {student.created_at
-                              ? new Date(student.created_at).toLocaleDateString()
+                              ? new Date(student.created_at).toLocaleDateString('en-GB', {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric',
+                                })
                               : '—'}
                           </TableCell>
                           <TableCell className="text-right">

@@ -130,12 +130,12 @@ export function StudentFormDialog({
           <DialogTitle className="flex items-center gap-2">
             {isEditMode ? (
               <>
-                <UserCog className="h-5 w-5 text-blue-500" />
+                <UserCog className="h-5 w-5 text-muted-foreground" />
                 Edit Student
               </>
             ) : (
               <>
-                <UserPlus className="h-5 w-5 text-emerald-500" />
+                <UserPlus className="h-5 w-5 text-muted-foreground" />
                 Add New Student
               </>
             )}
