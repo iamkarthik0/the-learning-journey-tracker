@@ -180,8 +180,7 @@ export function ChapterAnalyticsClient({
             Subjects & Chapters
           </CardTitle>
           <CardDescription>
-            Subject kholo → section choose karo → chapter → question pe click
-            karke us din ki attendance dekho
+            Open a subject → choose a section → open a chapter → click a question to view attendance for that day
           </CardDescription>
         </CardHeader>
         <CardContent className="px-2 sm:px-6">
@@ -190,7 +189,7 @@ export function ChapterAnalyticsClient({
               <Library className="h-12 w-12 text-muted-foreground/40" />
               <p className="mt-3 text-sm font-medium">No chapters found</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Pehle Teacher Dashboard se subject aur chapter create karo
+                Create subjects and chapters from the Teacher Dashboard first
               </p>
             </div>
           ) : (
@@ -233,7 +232,7 @@ export function ChapterAnalyticsClient({
             </p>
           ) : !dayData.taught_date ? (
             <p className="py-6 text-center text-sm text-muted-foreground">
-              Ye question abhi taught nahi hua, isliye koi date nahi.
+              This question has not been taught yet, so no date is available.
             </p>
           ) : (
             <QuestionDayView data={dayData} />
@@ -442,7 +441,7 @@ function ChapterBlock({
                 title={
                   q.is_completed
                     ? 'Click to see who was present that day'
-                    : 'Question abhi taught nahi hua'
+                    : 'Question not taught yet'
                 }
               >
                 {q.is_completed ? (
@@ -579,7 +578,7 @@ function QuestionDayView({ data }: { data: QuestionDayAttendance }) {
 
       {totalClass === 0 && (
         <p className="py-4 text-center text-sm text-muted-foreground">
-          Is section/din ke liye koi student/attendance record nahi mila.
+          No students or attendance records found for this section and date.
         </p>
       )}
     </div>

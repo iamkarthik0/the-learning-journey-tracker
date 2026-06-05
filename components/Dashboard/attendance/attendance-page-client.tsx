@@ -207,6 +207,11 @@ export function AttendancePageClient({
     router.refresh();
   };
 
+  const handleAlreadyComplete = () => {
+    // Don't close the dialog — just let the tracker show the message and reset itself
+    // User can close the dialog manually if they want
+  };
+
   const handleOpenChange = (open: boolean) => {
     setDialogOpen(open);
     if (!open) setEditingRecord(null);
@@ -256,7 +261,7 @@ export function AttendancePageClient({
                     editingRecord={editingRecord}
                     onSaveComplete={handleSaveComplete}
                     onRecordSaved={handleRecordSaved}
-                    onAlreadyComplete={() => setDialogOpen(false)}
+                    onAlreadyComplete={handleAlreadyComplete}
                     className="border-0 shadow-none p-0 bg-transparent"
                   />
                 </Suspense>
@@ -546,7 +551,7 @@ export function AttendancePageClient({
                   editingRecord={editingRecord}
                   onSaveComplete={handleSaveComplete}
                   onRecordSaved={handleRecordSaved}
-                  onAlreadyComplete={() => setDialogOpen(false)}
+                  onAlreadyComplete={handleAlreadyComplete}
                   className="border-0 shadow-none p-0 bg-transparent"
                 />
               </Suspense>

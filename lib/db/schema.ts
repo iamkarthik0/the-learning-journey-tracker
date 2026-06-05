@@ -104,3 +104,16 @@ export const studentAttendance = sqliteTable('student_attendance', {
   created_at: text('created_at').default(sql`CURRENT_TIMESTAMP`),
   updated_at: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
 });
+
+// STUDENT QUESTION CATCHUP - Tracks per-student question outcomes
+// type = 'catchup'  → student was absent but covered the question later
+// type = 'mastery'  → student was present but demonstrated they understood the question
+export const studentQuestionCatchup = sqliteTable('student_question_catchup', {
+  catchup_id: text('catchup_id').primaryKey(),
+  student_id: text('student_id').notNull(),
+  chapter_id: text('chapter_id').notNull(),
+  question_index: integer('question_index').notNull(),
+  type: text('type', { enum: ['catchup', 'mastery', 'caught_up_mastered'] }).notNull().default('catchup'),
+  caught_up_date: text('caught_up_date').notNull(), // YYYY-MM-DD
+  created_at: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+});

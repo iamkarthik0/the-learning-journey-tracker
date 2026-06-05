@@ -280,7 +280,52 @@ export function AttendanceTracker({ editingRecord, onSaveComplete, onRecordSaved
     }));
   };
 
-  const handleSaveAndNext = async () => {
+  const handleNext = () => {
+    if (currentStudentIndex < students.length - 1) {
+      setCurrentStudentIndex(currentStudentIndex + 1);
+    }
+  };
+
+  const handleSaveAll = async () => {
+    if (!currentStudent) return;
+
+    setIsLoading(true);
+    let allSuccess = true;
+
+    for (const student of students) {
+      const data = attendanceData[student.student_id];
+      if (!data) continue;
+
+      const result = await saveAttendance({
+        student_id: student.student_id,
+        status: data.status,
+        subject_status: data.subject_status,
+        attendance_date: editingRecord?.attendance_date,
+      });
+
+      if (!result.success) {
+        toast.error(`Failed to save ${student.full_name}: ${result.message}`);
+        allSuccess = false;
+      }
+    }
+
+    setIsLoading(false);
+
+    if (allSuccess) {
+      toast.success(`Attendance saved for all ${students.length} students!`);
+      onRecordSaved?.();
+      onSaveComplete?.();
+
+      setIsStarted(false);
+      setCurrentStudentIndex(0);
+      setStudents([]);
+      setAttendanceData({});
+      setSelectedGrade('');
+      setSelectedSection('');
+    }
+  };
+
+  const handleSaveEdit = async () => {
     if (!currentStudent) return;
 
     const data = attendanceData[currentStudent.student_id];
@@ -294,32 +339,14 @@ export function AttendanceTracker({ editingRecord, onSaveComplete, onRecordSaved
     if (result.success) {
       toast.success(result.message);
       onRecordSaved?.();
-      
-      if (isEditMode && onSaveComplete) {
-        onSaveComplete();
-        setIsEditMode(false);
-        setIsStarted(false);
-        setSelectedGrade('');
-        setSelectedSection('');
-        setStudents([]);
-        setAttendanceData({});
-        setCurrentStudentIndex(0);
-        return;
-      }
-      
-      if (currentStudentIndex < students.length - 1) {
-        setCurrentStudentIndex(currentStudentIndex + 1);
-      } else {
-        toast.success('All students completed!');
-        onSaveComplete?.();
-        
-        setIsStarted(false);
-        setCurrentStudentIndex(0);
-        setStudents([]);
-        setAttendanceData({});
-        setSelectedGrade('');
-        setSelectedSection('');
-      }
+      onSaveComplete?.();
+      setIsEditMode(false);
+      setIsStarted(false);
+      setSelectedGrade('');
+      setSelectedSection('');
+      setStudents([]);
+      setAttendanceData({});
+      setCurrentStudentIndex(0);
     } else {
       toast.error(result.message);
     }
@@ -499,6 +526,21 @@ export function AttendanceTracker({ editingRecord, onSaveComplete, onRecordSaved
             </Badge>
           </div>
         </div>
+        {/* Progress bar */}
+        {!isEditMode && (
+          <div className="mt-2 space-y-1.5">
+            <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+              <div
+                className="h-full rounded-full bg-primary transition-all duration-300"
+                style={{ width: `${((currentStudentIndex + 1) / students.length) * 100}%` }}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {currentStudentIndex + 1} of {students.length} students
+              {currentStudentIndex < students.length - 1 && ' — use Next to continue, Save All & Finish on the last student'}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Content */}
@@ -656,7 +698,7 @@ export function AttendanceTracker({ editingRecord, onSaveComplete, onRecordSaved
                 Cancel
               </Button>
               <Button
-                onClick={handleSaveAndNext}
+                onClick={handleSaveEdit}
                 size="lg"
                 className="order-1 w-full sm:order-2 sm:flex-1"
               >
@@ -675,20 +717,32 @@ export function AttendanceTracker({ editingRecord, onSaveComplete, onRecordSaved
                 <ChevronLeft className="mr-1 h-5 w-5" />
                 Previous
               </Button>
-              <Button
-                onClick={handleSaveAndNext}
-                size="lg"
-                className="w-full sm:flex-1"
-              >
-                {currentStudentIndex === students.length - 1 ? (
-                  'Save & Finish'
-                ) : (
-                  <>
-                    Save & Next
-                    <ChevronRight className="ml-1 h-5 w-5" />
-                  </>
-                )}
-              </Button>
+              {currentStudentIndex < students.length - 1 ? (
+                <Button
+                  onClick={handleNext}
+                  size="lg"
+                  className="w-full sm:flex-1"
+                >
+                  Next
+                  <ChevronRight className="ml-1 h-5 w-5" />
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleSaveAll}
+                  disabled={isLoading}
+                  size="lg"
+                  className="w-full sm:flex-1"
+                >
+                  {isLoading ? (
+                    <div className="flex items-center gap-2">
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      Saving...
+                    </div>
+                  ) : (
+                    'Save All & Finish'
+                  )}
+                </Button>
+              )}
             </>
           )}
         </div>
