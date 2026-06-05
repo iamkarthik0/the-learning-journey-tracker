@@ -50,23 +50,23 @@ function formatDate(d: string | null) {
 
 // ── Chart configs (shadcn style) ──────────────────────────────────────────
 
-// Chart colors — map to CSS variables so light/dark theme both work
+// Chart colors — var(--color-X) pattern, oklch compatible
 const attendancePieConfig = {
-  present:             { label: 'Present',              color: 'var(--chart-1)' },
-  mastered:            { label: 'Present + Mastered',   color: 'var(--chart-2)' },
-  caught_up:           { label: 'Caught Up',            color: 'var(--chart-3)' },
-  absent:              { label: 'Absent',               color: 'var(--chart-4)' },
-  caught_up_mastered:  { label: 'Caught Up + Mastered', color: 'var(--chart-5)' },
-  not_marked:          { label: 'Not Marked',           color: 'var(--muted-foreground)' },
+  present:             { label: 'Present',              color: 'oklch(63.07% 0.101 183.85)' }, // chart-2
+  mastered:            { label: 'Present + Mastered',   color: 'oklch(37.90% 0.044 226.15)' }, // chart-3
+  caught_up:           { label: 'Caught Up',            color: 'oklch(78.25% 0.126 58.24)'  }, // chart-5
+  absent:              { label: 'Absent',               color: 'oklch(67.67% 0.157 35.10)'  }, // chart-1
+  caught_up_mastered:  { label: 'Caught Up + Mastered', color: 'oklch(83.30% 0.119 88.35)'  }, // chart-4
+  not_marked:          { label: 'Not Marked',           color: 'oklch(0.60 0.00 0)'         },
 } satisfies ChartConfig;
 
 const questionBarConfig = {
-  present:             { label: 'Present',              color: 'var(--chart-1)' },
-  mastered:            { label: 'Present + Mastered',   color: 'var(--chart-2)' },
-  caught_up:           { label: 'Caught Up',            color: 'var(--chart-3)' },
-  absent:              { label: 'Absent',               color: 'var(--chart-4)' },
-  caught_up_mastered:  { label: 'Caught Up + Mastered', color: 'var(--chart-5)' },
-  not_marked:          { label: 'Not Marked',           color: 'var(--muted-foreground)' },
+  present:             { label: 'Present',              color: 'oklch(63.07% 0.101 183.85)' }, // chart-2
+  mastered:            { label: 'Present + Mastered',   color: 'oklch(37.90% 0.044 226.15)' }, // chart-3
+  caught_up:           { label: 'Caught Up',            color: 'oklch(78.25% 0.126 58.24)'  }, // chart-5
+  absent:              { label: 'Absent',               color: 'oklch(67.67% 0.157 35.10)'  }, // chart-1
+  caught_up_mastered:  { label: 'Caught Up + Mastered', color: 'oklch(83.30% 0.119 88.35)'  }, // chart-4
+  not_marked:          { label: 'Not Marked',           color: 'oklch(0.60 0.00 0)'         },
 } satisfies ChartConfig;
 
 // ── Main Client Component ──────────────────────────────────────────────────
@@ -473,12 +473,12 @@ function ChapterDetailView({ detail }: { detail: ChapterAttendanceDetail }) {
   const notMarkedCount    = taughtQs.length > 0 ? Math.round(taughtQs.reduce((s, q) => s + q.not_marked.length, 0) / taughtQs.length) : 0;
 
   const pieData = [
-    { name: 'present',            value: presentCount     },
-    { name: 'mastered',           value: masteredCount    },
-    { name: 'absent',             value: absentCount      },
-    { name: 'caught_up',          value: caughtUpCount    },
-    { name: 'caught_up_mastered', value: cumMasteredCount },
-    { name: 'not_marked',         value: notMarkedCount   },
+    { name: 'present',            value: presentCount,    fill: 'oklch(63.07% 0.101 183.85)' },
+    { name: 'mastered',           value: masteredCount,   fill: 'oklch(37.90% 0.044 226.15)' },
+    { name: 'absent',             value: absentCount,     fill: 'oklch(67.67% 0.157 35.10)'  },
+    { name: 'caught_up',          value: caughtUpCount,   fill: 'oklch(78.25% 0.126 58.24)'  },
+    { name: 'caught_up_mastered', value: cumMasteredCount, fill: 'oklch(83.30% 0.119 88.35)'  },
+    { name: 'not_marked',         value: notMarkedCount,  fill: 'oklch(0.60 0.00 0)'   },
   ].filter((d) => d.value > 0);
 
   // Bar data per taught question — 5 stacks
@@ -677,7 +677,7 @@ function ChapterDetailView({ detail }: { detail: ChapterAttendanceDetail }) {
                       <ChartTooltip content={<ChartTooltipContent nameKey="name" hideLabel />} />
                       <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={88} paddingAngle={3}>
                         {pieData.map((entry, i) => (
-                          <Cell key={i} fill={`var(--color-${entry.name})`} />
+                          <Cell key={i} fill={entry.fill} />
                         ))}
                       </Pie>
                       <ChartLegend content={<ChartLegendContent nameKey="name" />} />
@@ -713,12 +713,12 @@ function ChapterDetailView({ detail }: { detail: ChapterAttendanceDetail }) {
                           />
                         }
                       />
-                      <Bar dataKey="present"            fill="var(--color-present)"            name="Present"             radius={[0, 0, 0, 0]} stackId="a" />
-                      <Bar dataKey="mastered"           fill="var(--color-mastered)"           name="Present + Mastered"  radius={[0, 0, 0, 0]} stackId="a" />
-                      <Bar dataKey="caught_up"          fill="var(--color-caught_up)"          name="Caught Up"           radius={[0, 0, 0, 0]} stackId="a" />
-                      <Bar dataKey="caught_up_mastered" fill="var(--color-caught_up_mastered)" name="Caught Up + Mastered" radius={[0, 0, 0, 0]} stackId="a" />
-                      <Bar dataKey="absent"             fill="var(--color-absent)"             name="Absent"              radius={[0, 0, 0, 0]} stackId="a" />
-                      <Bar dataKey="not_marked"         fill="var(--color-not_marked)"         name="Not Marked"          radius={[0, 2, 2, 0]} stackId="a" />
+                      <Bar dataKey="present"            fill="oklch(63.07% 0.101 183.85)" name="Present"             radius={[0, 0, 0, 0]} stackId="a" />
+                      <Bar dataKey="mastered"           fill="oklch(37.90% 0.044 226.15)" name="Present + Mastered"  radius={[0, 0, 0, 0]} stackId="a" />
+                      <Bar dataKey="caught_up"          fill="oklch(78.25% 0.126 58.24)"  name="Caught Up"           radius={[0, 0, 0, 0]} stackId="a" />
+                      <Bar dataKey="caught_up_mastered" fill="oklch(83.30% 0.119 88.35)"  name="Caught Up + Mastered" radius={[0, 0, 0, 0]} stackId="a" />
+                      <Bar dataKey="absent"             fill="oklch(67.67% 0.157 35.10)"  name="Absent"              radius={[0, 0, 0, 0]} stackId="a" />
+                      <Bar dataKey="not_marked"         fill="oklch(0.60 0.00 0)"   name="Not Marked"          radius={[0, 2, 2, 0]} stackId="a" />
                     </BarChart>
                   </ChartContainer>
                 </CardContent>
