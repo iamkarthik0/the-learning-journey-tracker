@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useEffect, useState, useTransition } from 'react';
 import {
   Card,
   CardContent,
@@ -9,20 +9,26 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
   type ChartConfig,
 } from '@/components/ui/chart';
 import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  XAxis,
-  YAxis,
-  Cell,
+  PieChart,
+  Pie,
+  Label,
 } from 'recharts';
-import { BookOpen, ListChecks } from 'lucide-react';
+import { BookOpen, ListChecks, Users } from 'lucide-react';
 
 type QuestionLite = {
   text: string;
@@ -49,20 +55,6 @@ type SubjectLite = {
   grade_level: string | null;
 };
 
-const subjectChartConfig = {
-  percent: {
-    label: 'Completion %',
-    color: 'var(--chart-1)',
-  },
-} satisfies ChartConfig;
-
-const chapterChartConfig = {
-  percent: {
-    label: 'Questions taught %',
-    color: 'var(--chart-2)',
-  },
-} satisfies ChartConfig;
-
 export function AnalyticsCharts({
   subjects,
   chapters,
@@ -70,6 +62,8 @@ export function AnalyticsCharts({
   subjects: SubjectLite[];
   chapters: ChapterLite[];
 }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   // ---- SUBJECT-WISE: har subject ke saare chapters ke questions ka completion % ----
   const subjectData = useMemo(() => {
     const map = new Map<
@@ -103,24 +97,6 @@ export function AnalyticsCharts({
       .sort((a, b) => b.percent - a.percent);
   }, [chapters, subjects]);
 
-  // ---- CHAPTER-WISE: har chapter ka questions-taught % ----
-  const chapterData = useMemo(() => {
-    return chapters
-      .map((ch) => {
-        const total = ch.questions.length;
-        const done = ch.questions.filter((q) => q.is_completed).length;
-        return {
-          label:
-            (ch.order_index ? `Ch ${ch.order_index}: ` : '') + ch.chapter_name,
-          percent: total > 0 ? Math.round((done / total) * 100) : 0,
-          done,
-          total,
-          is_completed: ch.is_completed,
-        };
-      })
-      .sort((a, b) => b.percent - a.percent);
-  }, [chapters]);
-
   // Overall totals
   const overall = useMemo(() => {
     let total = 0;
@@ -144,9 +120,11 @@ export function AnalyticsCharts({
     return null;
   }
 
-  // Dynamic height: har bar ke liye thodi height (horizontal bars)
-  const subjectChartHeight = Math.max(160, subjectData.length * 44 + 40);
-  const chapterChartHeight = Math.max(160, chapterData.length * 40 + 40);
+  if (!mounted) {
+    return null;
+  }
+
+  // Dynamic height no longer needed
 
   return (
     <div className="space-y-6">
@@ -212,117 +190,278 @@ export function AnalyticsCharts({
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Subject-wise completion */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Subject Completion</CardTitle>
-            <CardDescription>
-              Har subject ke saare chapters ke questions ka taught %
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer
-              config={subjectChartConfig}
-              className="w-full"
-              style={{ height: subjectChartHeight }}
-            >
-              <BarChart
-                accessibilityLayer
-                data={subjectData}
-                layout="vertical"
-                margin={{ left: 8, right: 32 }}
-              >
-                <CartesianGrid horizontal={false} />
-                <XAxis type="number" domain={[0, 100]} hide />
-                <YAxis
-                  type="category"
-                  dataKey="label"
-                  tickLine={false}
-                  axisLine={false}
-                  width={110}
-                  tick={{ fontSize: 12 }}
-                />
-                <ChartTooltip
-                  content={
-                    <ChartTooltipContent
-                      formatter={(value, _name, item) => (
-                        <span>
-                          {value}% taught ({item.payload.done}/
-                          {item.payload.total})
-                        </span>
-                      )}
-                    />
-                  }
-                />
-                <Bar
-                  dataKey="percent"
-                  radius={[0, 4, 4, 0]}
-                  fill="var(--color-percent)"
-                />
-              </BarChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
+        {/* Chapter completion — Donut with Text */}
+        <ChapterCompletionDonut chapters={chapters} />
 
-        {/* Chapter-wise completion */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Chapter Progress</CardTitle>
-            <CardDescription>
-              Har chapter me kitne % questions taught hue (green = completed)
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer
-              config={chapterChartConfig}
-              className="w-full"
-              style={{ height: chapterChartHeight }}
-            >
-              <BarChart
-                accessibilityLayer
-                data={chapterData}
-                layout="vertical"
-                margin={{ left: 8, right: 32 }}
-              >
-                <CartesianGrid horizontal={false} />
-                <XAxis type="number" domain={[0, 100]} hide />
-                <YAxis
-                  type="category"
-                  dataKey="label"
-                  tickLine={false}
-                  axisLine={false}
-                  width={120}
-                  tick={{ fontSize: 12 }}
-                />
-                <ChartTooltip
-                  content={
-                    <ChartTooltipContent
-                      formatter={(value, _name, item) => (
-                        <span>
-                          {value}% taught ({item.payload.done}/
-                          {item.payload.total})
-                        </span>
-                      )}
-                    />
-                  }
-                />
-                <Bar dataKey="percent" radius={[0, 4, 4, 0]}>
-                  {chapterData.map((entry, i) => (
-                    <Cell
-                      key={i}
-                      fill={
-                        entry.is_completed
-                          ? 'var(--chart-1)'
-                          : 'var(--chart-2)'
-                      }
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
+        {/* Chapter Attendance — question-level */}
+        <ChapterAttendanceChart chapters={chapters} />
       </div>
     </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   CHAPTER COMPLETION DONUT — completed vs in-progress chapters
+──────────────────────────────────────────────────────────────────*/
+const completionChartConfig = {
+  completed:   { label: 'Completed',   color: 'var(--chart-1)' },
+  inProgress:  { label: 'In Progress', color: 'var(--chart-2)' },
+} satisfies ChartConfig;
+
+function ChapterCompletionDonut({ chapters }: { chapters: ChapterLite[] }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  const completed  = chapters.filter((c) => c.is_completed).length;
+  const inProgress = chapters.length - completed;
+  const pct = chapters.length > 0 ? Math.round((completed / chapters.length) * 100) : 0;
+
+  const donutData = [
+    { name: 'completed',  value: completed,  fill: 'var(--color-completed)'  },
+    { name: 'inProgress', value: inProgress, fill: 'var(--color-inProgress)' },
+  ].filter((d) => d.value > 0);
+
+  if (!mounted) return null;
+
+  return (
+    <Card className="flex flex-col">
+      <CardHeader className="items-center pb-0">
+        <CardTitle className="text-lg">Chapter Completion</CardTitle>
+        <CardDescription>Completed vs in-progress chapters</CardDescription>
+      </CardHeader>
+      <CardContent className="flex-1 pb-0">
+        <ChartContainer
+          config={completionChartConfig}
+          className="mx-auto aspect-square max-h-[280px]"
+        >
+          <PieChart>
+            <ChartTooltip
+              cursor={false}
+              content={
+                <ChartTooltipContent
+                  hideLabel
+                  formatter={(value, name) => (
+                    <span>
+                      {name === 'completed' ? 'Completed' : 'In Progress'}: {String(value)} chapters
+                    </span>
+                  )}
+                />
+              }
+            />
+            <Pie data={donutData} dataKey="value" nameKey="name" innerRadius={72} strokeWidth={2}>
+              <Label
+                content={({ viewBox }) => {
+                  if (viewBox && 'cx' in viewBox && 'cy' in viewBox) {
+                    return (
+                      <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
+                        <tspan x={viewBox.cx} y={viewBox.cy} className="fill-foreground text-3xl font-bold">
+                          {pct}%
+                        </tspan>
+                        <tspan x={viewBox.cx} y={(viewBox.cy ?? 0) + 26} className="fill-muted-foreground text-sm">
+                          {completed}/{chapters.length} done
+                        </tspan>
+                      </text>
+                    );
+                  }
+                }}
+              />
+            </Pie>
+            <ChartLegend content={<ChartLegendContent nameKey="name" />} className="-translate-y-2 flex-wrap gap-2 *:basis-1/3 *:justify-center" />
+          </PieChart>
+        </ChartContainer>
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   CHAPTER ATTENDANCE — chapter → question select → that day's present/absent
+──────────────────────────────────────────────────────────────────*/
+const qAttendanceConfig = {
+  present:   { label: 'Present',    color: 'var(--chart-1)' },
+  absent:    { label: 'Absent',     color: 'var(--chart-2)' },
+  notMarked: { label: 'Not marked', color: 'var(--chart-3)' },
+} satisfies ChartConfig;
+
+function ChapterAttendanceChart({ chapters }: { chapters: ChapterLite[] }) {
+  const [mounted, setMounted] = useState(false);
+  const [selectedChapterId, setSelectedChapterId] = useState(chapters[0]?.chapter_id ?? '');
+  const [selectedQIndex,    setSelectedQIndex]    = useState<string>('');
+  const [data, setData] = useState<import('@/lib/actions/student-analytics-actions').QuestionDayAttendance | null>(null);
+  const [isLoading, startT] = useTransition();
+
+  useEffect(() => setMounted(true), []);
+
+  // Reset everything when top filter changes (chapters prop changes)
+  useEffect(() => {
+    setSelectedChapterId(chapters[0]?.chapter_id ?? '');
+    setSelectedQIndex('');
+    setData(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chapters.map((c) => c.chapter_id).join(',')]);
+
+  // Reset question when chapter changes
+  const handleChapterChange = (id: string) => {
+    setSelectedChapterId(id);
+    setSelectedQIndex('');
+    setData(null);
+  };
+
+  const selectedChapter = chapters.find((c) => c.chapter_id === selectedChapterId);
+
+  // Only taught questions (have taught_date)
+  const taughtQuestions = useMemo(
+    () =>
+      (selectedChapter?.questions ?? [])
+        .map((q, i) => ({ ...q, index: i }))
+        .filter((q) => q.is_completed && q.taught_date),
+    [selectedChapter]
+  );
+
+  const handleQuestionChange = (val: string) => {
+    setSelectedQIndex(val);
+    if (!selectedChapterId || val === '') { setData(null); return; }
+    startT(async () => {
+      const { getQuestionDayAttendance } = await import('@/lib/actions/student-analytics-actions');
+      const result = await getQuestionDayAttendance({
+        chapter_id: selectedChapterId,
+        question_index: Number(val),
+      });
+      setData(result);
+    });
+  };
+
+  const total    = (data?.present.length ?? 0) + (data?.absent.length ?? 0) + (data?.notMarked.length ?? 0);
+  const pct      = total > 0 ? Math.round(((data?.present.length ?? 0) / total) * 100) : 0;
+
+  const donutData = data && total > 0
+    ? [
+        { name: 'present',   value: data.present.length,   fill: 'var(--color-present)'   },
+        { name: 'absent',    value: data.absent.length,    fill: 'var(--color-absent)'    },
+        ...(data.notMarked.length > 0
+          ? [{ name: 'notMarked', value: data.notMarked.length, fill: 'var(--color-notMarked)' }]
+          : []),
+      ]
+    : [];
+
+  return (
+    <Card className="flex flex-col">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-lg">
+          <Users className="h-5 w-5" />
+          Question Attendance
+        </CardTitle>
+        <CardDescription>Select a chapter and question to see who was present that day</CardDescription>
+      </CardHeader>
+
+      <CardContent className="space-y-3">
+        {/* Chapter selector */}
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-muted-foreground">Chapter</label>
+          <Select value={selectedChapterId} onValueChange={handleChapterChange}>
+            <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {chapters.map((ch) => (
+                <SelectItem key={ch.chapter_id} value={ch.chapter_id}>
+                  {ch.order_index ? `Ch ${ch.order_index}: ` : ''}{ch.chapter_name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Question selector — only taught questions */}
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-muted-foreground">Question</label>
+          <Select value={selectedQIndex} onValueChange={handleQuestionChange} disabled={taughtQuestions.length === 0}>
+            <SelectTrigger className="h-9 text-sm">
+              {/* Trigger shows Q{n} — same for all questions, short and clean */}
+              {selectedQIndex
+                ? <span className="font-medium">Q{Number(selectedQIndex) + 1}</span>
+                : <SelectValue placeholder={taughtQuestions.length === 0 ? 'No taught questions' : 'Select a question'} />
+              }
+            </SelectTrigger>
+            <SelectContent className="w-(--radix-select-trigger-width) max-w-xs sm:max-w-sm" align="start" position="popper">
+              {taughtQuestions.map((q) => (
+                <SelectItem
+                  key={q.index}
+                  value={String(q.index)}
+                  className="whitespace-normal"
+                >
+                  {/* Q{n}: full question text */}
+                  <span className="block leading-snug">
+                    <span className="font-medium text-muted-foreground mr-1.5">
+                      Q{q.index + 1}
+                    </span>
+                    {q.text}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Chart area */}
+        {!selectedQIndex ? (
+          <div className="flex h-[200px] flex-col items-center justify-center text-center">
+            <Users className="h-10 w-10 text-muted-foreground/30" />
+            <p className="mt-2 text-sm text-muted-foreground">Select a question to view attendance</p>
+          </div>
+        ) : isLoading || !mounted ? (
+          <div className="flex h-[200px] items-center justify-center">
+            <div className="h-7 w-7 animate-spin rounded-full border-4 border-muted border-t-primary" />
+          </div>
+        ) : !data || total === 0 ? (
+          <div className="flex h-[200px] flex-col items-center justify-center text-center">
+            <p className="text-sm text-muted-foreground">No attendance data for this question's date.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {/* Date */}
+            <p className="text-center text-xs text-muted-foreground">
+              {data.taught_date
+                ? new Date(data.taught_date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' })
+                : ''}
+            </p>
+
+            {/* Stat row */}
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="rounded-lg bg-muted/50 p-2">
+                <div className="text-xl font-bold text-emerald-600 dark:text-emerald-500">{data.present.length}</div>
+                <div className="text-xs text-muted-foreground">Present</div>
+              </div>
+              <div className="rounded-lg bg-muted/50 p-2">
+                <div className="text-xl font-bold text-rose-600 dark:text-rose-500">{data.absent.length}</div>
+                <div className="text-xs text-muted-foreground">Absent</div>
+              </div>
+              <div className="rounded-lg bg-muted/50 p-2">
+                <div className="text-xl font-bold">{total}</div>
+                <div className="text-xs text-muted-foreground">Total</div>
+              </div>
+            </div>
+
+            {/* Donut */}
+            <ChartContainer config={qAttendanceConfig} className="mx-auto aspect-square max-h-[180px]">
+              <PieChart>
+                <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
+                <Pie data={donutData} dataKey="value" nameKey="name" innerRadius={52} strokeWidth={2}>
+                  <Label content={({ viewBox }) => {
+                    if (viewBox && 'cx' in viewBox && 'cy' in viewBox) {
+                      return (
+                        <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
+                          <tspan x={viewBox.cx} y={viewBox.cy} className="fill-foreground text-2xl font-bold">{pct}%</tspan>
+                          <tspan x={viewBox.cx} y={(viewBox.cy ?? 0) + 20} className="fill-muted-foreground text-xs">present</tspan>
+                        </text>
+                      );
+                    }
+                  }} />
+                </Pie>
+                <ChartLegend content={<ChartLegendContent nameKey="name" />} />
+              </PieChart>
+            </ChartContainer>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

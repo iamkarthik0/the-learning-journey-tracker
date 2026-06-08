@@ -12,6 +12,7 @@ import {
   BookOpen,
   CalendarCheck,
   BarChart3,
+  History,
 } from "lucide-react"
 
 import {
@@ -78,6 +79,11 @@ const data = {
       title: "Analytics",
       url: "/dashboard/analytics",
       icon: BarChart3,
+    },
+    {
+      title: "History",
+      url: "/dashboard/history",
+      icon: History,
     },
     {
       title: "Attendance",

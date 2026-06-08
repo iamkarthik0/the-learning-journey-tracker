@@ -205,7 +205,144 @@ export async function getStudentAnalytics(
   }
 }
 
-// ---- QUESTION-DAY ATTENDANCE ----
+// ---- CHAPTER-LEVEL ATTENDANCE OVERVIEW ----
+// Ek chapter ke saare taught_dates pe aggregate attendance
+export type ChapterAttendanceOverview = {
+  chapter_id: string;
+  chapter_name: string;
+  subject_name: string | null;
+  section: string | null;
+  grade_level: string | null;
+  // Unique class days (dates jab koi question padha gaya)
+  total_class_days: number;
+  // Across all class days — per-student total marks
+  total_student_days: number; // classStudents.length × class_days
+  present_count: number;
+  absent_count: number;
+  not_marked_count: number;
+  present_percent: number;
+  absent_percent: number;
+  // Day-wise breakdown for detail view
+  day_breakdown: Array<{
+    date: string;
+    present: number;
+    absent: number;
+    not_marked: number;
+    total_students: number;
+  }>;
+};
+
+export async function getChapterAttendanceOverview(
+  chapter_id: string
+): Promise<ChapterAttendanceOverview | null> {
+  try {
+    const chapter = await chapterAdapter.findById(chapter_id);
+    if (!chapter) return null;
+
+    const allSubjects = await subjectAdapter.findAll();
+    const subject = allSubjects.find((s) => s.subject_id === chapter.subject_id);
+    const gradeLevel = subject?.grade_level ?? null;
+    const section    = chapter.section ?? null;
+
+    // Get unique taught_dates from questions
+    const questions = chapter.questions ?? [];
+    const taughtDates = Array.from(
+      new Set(
+        questions
+          .map((q) => q.taught_date)
+          .filter((d): d is string => !!d)
+      )
+    ).sort();
+
+    if (taughtDates.length === 0) {
+      return {
+        chapter_id,
+        chapter_name: chapter.chapter_name,
+        subject_name: subject?.subject_name ?? chapter.subject_name,
+        section,
+        grade_level: gradeLevel,
+        total_class_days: 0,
+        total_student_days: 0,
+        present_count: 0,
+        absent_count: 0,
+        not_marked_count: 0,
+        present_percent: 0,
+        absent_percent: 0,
+        day_breakdown: [],
+      };
+    }
+
+    // Students in this grade+section
+    const allStudents = await studentAdapter.findAll();
+    const classStudents = allStudents.filter(
+      (s) =>
+        s.status === 'active' &&
+        (!gradeLevel || s.grade_level === gradeLevel) &&
+        (!section    || s.section    === section)
+    );
+    const totalStudents = classStudents.length;
+    const studentIdSet  = new Set(classStudents.map((s) => s.student_id));
+
+    // All attendance records — filter to those dates
+    const allAttendance = await studentAttendanceAdapter.findAll();
+    const dateSet = new Set(taughtDates);
+    const relevantRecords = allAttendance.filter(
+      (r) => dateSet.has(r.attendance_date) && studentIdSet.has(r.student_id)
+    );
+
+    // Group by date
+    const byDate = new Map<string, Map<string, 'present' | 'absent'>>();
+    for (const rec of relevantRecords) {
+      if (!byDate.has(rec.attendance_date)) {
+        byDate.set(rec.attendance_date, new Map());
+      }
+      byDate
+        .get(rec.attendance_date)!
+        .set(rec.student_id, rec.status === 'absent' ? 'absent' : 'present');
+    }
+
+    let totalPresent = 0;
+    let totalAbsent  = 0;
+    let totalNotMarked = 0;
+
+    const day_breakdown = taughtDates.map((date) => {
+      const dayMap = byDate.get(date) ?? new Map();
+      let p = 0, a = 0, nm = 0;
+      for (const s of classStudents) {
+        const status = dayMap.get(s.student_id);
+        if (!status)           nm++;
+        else if (status === 'present') p++;
+        else                   a++;
+      }
+      totalPresent   += p;
+      totalAbsent    += a;
+      totalNotMarked += nm;
+      return { date, present: p, absent: a, not_marked: nm, total_students: totalStudents };
+    });
+
+    const totalStudentDays = taughtDates.length * totalStudents;
+    const marked = totalPresent + totalAbsent;
+
+    return {
+      chapter_id,
+      chapter_name: chapter.chapter_name,
+      subject_name: subject?.subject_name ?? chapter.subject_name,
+      section,
+      grade_level: gradeLevel,
+      total_class_days: taughtDates.length,
+      total_student_days: totalStudentDays,
+      present_count:    totalPresent,
+      absent_count:     totalAbsent,
+      not_marked_count: totalNotMarked,
+      present_percent:  marked > 0 ? Math.round((totalPresent / marked) * 100) : 0,
+      absent_percent:   marked > 0 ? Math.round((totalAbsent  / marked) * 100) : 0,
+      day_breakdown,
+    };
+  } catch (error) {
+    console.error('Error fetching chapter attendance overview:', error);
+    return null;
+  }
+}
 // Ek question ke taught_date pe us subject/grade ke saare students ka present/absent status
 export type QuestionDayStudent = {
   student_id: string;

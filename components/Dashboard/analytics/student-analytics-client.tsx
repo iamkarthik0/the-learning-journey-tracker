@@ -2,40 +2,26 @@
 
 import { useMemo, useState, useTransition } from 'react';
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+  Card, CardContent, CardDescription, CardHeader, CardTitle,
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
+  Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle,
+} from '@/components/ui/sheet';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  CheckCircle2,
-  Circle,
-  BookOpen,
-  CalendarDays,
-  UserCheck,
-  UserX,
-  HelpCircle,
-  Library,
-  Layers,
-  GraduationCap,
-  ChevronRight,
+  CheckCircle2, Circle, BookOpen, CalendarDays, UserCheck,
+  UserX, HelpCircle, ChevronRight, Library, RefreshCcw,
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { getQuestionDayAttendance } from '@/lib/actions/student-analytics-actions';
+import {
+  toggleStudentCaughtUp,
+  getCatchupForQuestion,
+  type CatchupStudentInfo,
+} from '@/lib/actions/catchup-actions';
 import type { QuestionDayAttendance } from '@/lib/actions/student-analytics-actions';
+import { toast } from 'sonner';
 
 type SubjectLite = {
   subject_id: string;
@@ -62,475 +48,416 @@ type ChapterLite = {
   questions: QuestionLite[];
 };
 
-function formatDate(d: string | null) {
+function fmt(d: string | null) {
   if (!d) return '—';
   return new Date(d).toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
+    day: 'numeric', month: 'short', year: 'numeric',
   });
 }
 
-function daysBetween(start: string | null, end: string | null): number | null {
-  if (!start || !end) return null;
-  const s = new Date(start);
-  const e = new Date(end);
-  return Math.floor((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+function daysBetween(a: string | null, b: string | null): number | null {
+  if (!a || !b) return null;
+  return Math.floor((new Date(b).getTime() - new Date(a).getTime()) / 86400000) + 1;
 }
 
-// Subject -> Section -> Chapters tree
-type SectionGroup = {
-  section: string;
-  chapters: ChapterLite[];
-};
-type SubjectGroup = {
-  subject_id: string;
-  subject_name: string;
-  grade_level: string | null;
-  sections: SectionGroup[];
-};
+const GRADE_ORDER = ['1st','2nd','3rd','4th','5th','6th','7th','8th','9th','10th','11th','12th'];
 
+/* ─────────────────────────────────────────────────────────────────
+   MAIN EXPORT
+──────────────────────────────────────────────────────────────────*/
 export function ChapterAnalyticsClient({
-  subjects,
-  chapters,
+  subjects, chapters,
 }: {
   subjects: SubjectLite[];
   chapters: ChapterLite[];
 }) {
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [dayData, setDayData] = useState<QuestionDayAttendance | null>(null);
-  const [dayQuestionText, setDayQuestionText] = useState('');
-  const [isLoadingDay, startDayTransition] = useTransition();
+  const [selectedChapter, setSelectedChapter] = useState<ChapterLite | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
 
-  const subjectMeta = useMemo(() => {
-    const m = new Map<string, SubjectLite>();
-    subjects.forEach((s) => m.set(s.subject_id, s));
-    return m;
-  }, [subjects]);
+  const sortedChapters = useMemo(() =>
+    [...chapters].sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0)),
+    [chapters]
+  );
 
-  const tree = useMemo<SubjectGroup[]>(() => {
-    const subjectMap = new Map<string, SubjectGroup>();
-
-    for (const ch of chapters) {
-      const meta = subjectMeta.get(ch.subject_id);
-      const subjectId = ch.subject_id;
-
-      if (!subjectMap.has(subjectId)) {
-        subjectMap.set(subjectId, {
-          subject_id: subjectId,
-          subject_name: meta?.subject_name ?? ch.subject_name ?? 'Unknown',
-          grade_level: meta?.grade_level ?? null,
-          sections: [],
-        });
-      }
-      const subjGroup = subjectMap.get(subjectId)!;
-
-      const sectionKey = ch.section || 'No section';
-      let sectionGroup = subjGroup.sections.find(
-        (s) => s.section === sectionKey
-      );
-      if (!sectionGroup) {
-        sectionGroup = { section: sectionKey, chapters: [] };
-        subjGroup.sections.push(sectionGroup);
-      }
-      sectionGroup.chapters.push(ch);
-    }
-
-    const groups = Array.from(subjectMap.values());
-    groups.sort((a, b) => {
-      const ga = a.grade_level || '';
-      const gb = b.grade_level || '';
-      if (ga !== gb) return ga.localeCompare(gb);
-      return a.subject_name.localeCompare(b.subject_name);
-    });
-    groups.forEach((g) => {
-      g.sections.sort((a, b) => a.section.localeCompare(b.section));
-      g.sections.forEach((s) =>
-        s.chapters.sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0))
-      );
-    });
-    return groups;
-  }, [chapters, subjectMeta]);
-
-  const openQuestionDay = (
-    chapter_id: string,
-    question_index: number,
-    questionText: string,
-    isCompleted: boolean
-  ) => {
-    if (!isCompleted) return;
-    setDayQuestionText(questionText);
-    setDayData(null);
-    setDialogOpen(true);
-    startDayTransition(async () => {
-      const data = await getQuestionDayAttendance({
-        chapter_id,
-        question_index,
-      });
-      setDayData(data);
-    });
+  const openChapter = (ch: ChapterLite) => {
+    setSelectedChapter(ch);
+    setSheetOpen(true);
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
             <Library className="h-5 w-5" />
-            Subjects & Chapters
+            Chapters
           </CardTitle>
           <CardDescription>
-            Open a subject → choose a section → open a chapter → click a question to view attendance for that day
+            Filter by grade, subject, and section — then click a chapter to view full details and attendance
           </CardDescription>
         </CardHeader>
-        <CardContent className="px-2 sm:px-6">
-          {tree.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <Library className="h-12 w-12 text-muted-foreground/40" />
+        <CardContent className="space-y-4">
+          {/* Chapter list */}
+          {sortedChapters.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <Library className="h-10 w-10 text-muted-foreground/30" />
               <p className="mt-3 text-sm font-medium">No chapters found</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Create subjects and chapters from the Teacher Dashboard first
+                Try changing the filters or add chapters from the Teacher Dashboard
               </p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {tree.map((subj) => (
-                <SubjectCollapsible
-                  key={subj.subject_id}
-                  subject={subj}
-                  onQuestionClick={openQuestionDay}
-                />
-              ))}
+            <div className="divide-y rounded-lg border">
+              {sortedChapters.map((ch) => {
+                const total = ch.questions.length;
+                const done  = ch.questions.filter((q) => q.is_completed).length;
+                const pct   = total > 0 ? Math.round((done / total) * 100) : 0;
+                return (
+                  <button
+                    key={ch.chapter_id}
+                    type="button"
+                    onClick={() => openChapter(ch)}
+                    className="flex w-full items-center gap-4 px-4 py-3 text-left transition-colors hover:bg-accent"
+                  >
+                    {/* Progress ring */}
+                    <div className="relative flex h-10 w-10 shrink-0 items-center justify-center">
+                      <svg className="h-10 w-10 -rotate-90" viewBox="0 0 36 36">
+                        <circle cx="18" cy="18" r="15" fill="none"
+                          stroke="currentColor" strokeWidth="3"
+                          className="text-muted/40" />
+                        <circle cx="18" cy="18" r="15" fill="none"
+                          stroke="currentColor" strokeWidth="3"
+                          strokeDasharray={`${pct * 0.942} 94.2`}
+                          strokeLinecap="round"
+                          className={ch.is_completed ? 'text-emerald-500' : 'text-primary'} />
+                      </svg>
+                      <span className="absolute text-[9px] font-bold">{pct}%</span>
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-medium">
+                          {ch.order_index ? `Ch ${ch.order_index}: ` : ''}
+                          {ch.chapter_name}
+                        </span>
+                        {ch.is_completed
+                          ? <Badge className="bg-emerald-600 hover:bg-emerald-600 text-xs">Completed</Badge>
+                          : <Badge variant="secondary" className="text-xs">In Progress</Badge>}
+                      </div>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                        <span>{ch.subject_name ?? '—'}</span>
+                        {ch.section && <span>Section {ch.section}</span>}
+                        <span>{done}/{total} taught</span>
+                      </div>
+                    </div>
+
+                    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  </button>
+                );
+              })}
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Question-day attendance dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg w-[96vw] sm:w-full max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-start gap-2 text-base">
-              <BookOpen className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-              <span className="wrap-break-word">{dayQuestionText}</span>
-            </DialogTitle>
-            <DialogDescription>
-              {dayData?.taught_date
-                ? `Is question ke din (${formatDate(dayData.taught_date)}) ki class attendance`
-                : 'Attendance for the day this question was taught'}
-            </DialogDescription>
-          </DialogHeader>
+      <ChapterSheet
+        chapter={selectedChapter}
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+      />
+    </div>
+  );
+}
 
-          {isLoadingDay ? (
-            <div className="py-10 text-center text-sm text-muted-foreground">
-              <div className="mx-auto mb-3 h-7 w-7 animate-spin rounded-full border-4 border-muted border-t-primary" />
-              Loading...
+/* ─────────────────────────────────────────────────────────────────
+   CHAPTER DETAIL SHEET
+──────────────────────────────────────────────────────────────────*/
+function ChapterSheet({
+  chapter, open, onOpenChange,
+}: {
+  chapter: ChapterLite | null;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}) {
+  // Per-question expanded state
+  const [expandedQ, setExpandedQ]   = useState<string | null>(null);
+  // Attendance data cache
+  const [dayData, setDayData]       = useState<Map<string, QuestionDayAttendance | 'loading' | 'error'>>(new Map());
+  // Catchup data cache: qKey → { catchup: [], mastery: [] }
+  const [catchupData, setCatchupData] = useState<Map<string, { catchup: CatchupStudentInfo[]; mastery: CatchupStudentInfo[] }>>(new Map());
+  const [, startT] = useTransition();
+
+  const loadQuestion = (qKey: string, chapter_id: string, qIndex: number) => {
+    // attendance
+    if (!dayData.has(qKey)) {
+      setDayData((p) => new Map(p).set(qKey, 'loading'));
+      startT(async () => {
+        const r = await getQuestionDayAttendance({ chapter_id, question_index: qIndex });
+        setDayData((p) => new Map(p).set(qKey, r ?? 'error'));
+      });
+    }
+    // catchup records
+    if (!catchupData.has(qKey)) {
+      startT(async () => {
+        const r = await getCatchupForQuestion({ chapter_id, question_index: qIndex });
+        setCatchupData((p) => new Map(p).set(qKey, r));
+      });
+    }
+  };
+
+  const toggleQuestion = (qKey: string, chapter_id: string, qIndex: number, isCompleted: boolean) => {
+    if (!isCompleted) return;
+    if (expandedQ === qKey) { setExpandedQ(null); return; }
+    setExpandedQ(qKey);
+    loadQuestion(qKey, chapter_id, qIndex);
+  };
+
+  const handleCaughtUp = (
+    qKey: string,
+    chapter_id: string,
+    qIndex: number,
+    student_id: string,
+    type: 'catchup' | 'mastery'
+  ) => {
+    startT(async () => {
+      const result = await toggleStudentCaughtUp({
+        student_id, chapter_id, question_index: qIndex, type,
+      });
+      if (result.success) {
+        toast.success(result.action === 'added' ? 'Marked as caught up' : 'Removed');
+        // Refresh catchup data for this question
+        const fresh = await getCatchupForQuestion({ chapter_id, question_index: qIndex });
+        setCatchupData((p) => new Map(p).set(qKey, fresh));
+      } else {
+        toast.error(result.message);
+      }
+    });
+  };
+
+  if (!chapter) return null;
+
+  const total = chapter.questions.length;
+  const done  = chapter.questions.filter((q) => q.is_completed).length;
+  const pct   = total > 0 ? Math.round((done / total) * 100) : 0;
+  const days  = daysBetween(chapter.start_date, chapter.end_date);
+
+  return (
+    <Sheet open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) setExpandedQ(null); }}>
+      <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-3xl">
+        {/* Header */}
+        <SheetHeader className="border-b px-6 py-5">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+              <BookOpen className="h-5 w-5 text-primary" />
             </div>
-          ) : !dayData ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">
-              Could not load attendance.
-            </p>
-          ) : !dayData.taught_date ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">
-              This question has not been taught yet, so no date is available.
+            <div className="min-w-0">
+              <SheetTitle className="text-left text-base leading-snug">
+                {chapter.order_index ? `Chapter ${chapter.order_index}: ` : ''}
+                {chapter.chapter_name}
+              </SheetTitle>
+              <SheetDescription className="mt-0.5 text-left">
+                {chapter.subject_name ?? '—'}
+                {chapter.section ? ` · Section ${chapter.section}` : ''}
+              </SheetDescription>
+            </div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-3 gap-2">
+            <div className="rounded-lg bg-muted/50 px-3 py-2 text-center">
+              <div className="text-2xl font-bold">{pct}%</div>
+              <div className="text-xs text-muted-foreground">Taught</div>
+            </div>
+            <div className="rounded-lg bg-muted/50 px-3 py-2 text-center">
+              <div className="text-2xl font-bold">{done}/{total}</div>
+              <div className="text-xs text-muted-foreground">Questions</div>
+            </div>
+            <div className="rounded-lg bg-muted/50 px-3 py-2 text-center">
+              <div className="text-2xl font-bold">{days ?? '—'}</div>
+              <div className="text-xs text-muted-foreground">Days taken</div>
+            </div>
+          </div>
+
+          <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted">
+            <div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+          </div>
+
+          <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+            <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+            {fmt(chapter.start_date)} → {fmt(chapter.end_date)}
+            {chapter.is_completed && (
+              <Badge className="ml-1 bg-emerald-600 hover:bg-emerald-600 text-xs">Completed</Badge>
+            )}
+          </div>
+        </SheetHeader>
+
+        {/* Questions */}
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          {total === 0 ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              No questions added to this chapter yet.
             </p>
           ) : (
-            <QuestionDayView data={dayData} />
-          )}
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-}
+            <div className="space-y-2">
+              <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Questions — click a taught question to view attendance &amp; mark caught up
+              </p>
+              {chapter.questions.map((q, i) => {
+                const qKey       = `${chapter.chapter_id}-${i}`;
+                const isExpanded = expandedQ === qKey;
+                const attendance = dayData.get(qKey);
+                const catchup    = catchupData.get(qKey);
 
-// SUBJECT level collapsible
-function SubjectCollapsible({
-  subject: subj,
-  onQuestionClick,
-}: {
-  subject: SubjectGroup;
-  onQuestionClick: (
-    chapter_id: string,
-    question_index: number,
-    questionText: string,
-    isCompleted: boolean
-  ) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const totalChapters = subj.sections.reduce(
-    (acc, s) => acc + s.chapters.length,
-    0
-  );
+                return (
+                  <div key={qKey} className="overflow-hidden rounded-lg border">
+                    <button
+                      type="button"
+                      disabled={!q.is_completed}
+                      onClick={() => toggleQuestion(qKey, chapter.chapter_id, i, q.is_completed)}
+                      className={cn(
+                        'flex w-full items-start gap-3 p-3 text-left text-sm transition-colors',
+                        q.is_completed ? 'cursor-pointer hover:bg-accent' : 'cursor-default',
+                        isExpanded && 'bg-accent'
+                      )}
+                    >
+                      {q.is_completed
+                        ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                        : <Circle       className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />}
 
-  return (
-    <Collapsible
-      open={open}
-      onOpenChange={setOpen}
-      className="rounded-lg border"
-    >
-      <CollapsibleTrigger className="flex w-full items-center gap-3 p-3 text-left sm:p-4">
-        <ChevronRight
-          className={
-            'h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 ' +
-            (open ? 'rotate-90' : '')
-          }
-        />
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-          <BookOpen className="h-4 w-4 text-primary" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="font-medium">{subj.subject_name}</span>
-            {subj.grade_level && (
-              <Badge variant="secondary" className="gap-1">
-                <GraduationCap className="h-3 w-3" />
-                Grade {subj.grade_level}
-              </Badge>
-            )}
-          </div>
-          <div className="mt-0.5 text-xs text-muted-foreground">
-            {subj.sections.length} section
-            {subj.sections.length !== 1 ? 's' : ''} · {totalChapters} chapter
-            {totalChapters !== 1 ? 's' : ''}
-          </div>
-        </div>
-      </CollapsibleTrigger>
+                      <span className={cn('flex-1', !q.is_completed && 'text-muted-foreground')}>
+                        {q.text}
+                      </span>
 
-      <CollapsibleContent>
-        <div className="space-y-2 border-t p-2 sm:p-3">
-          {subj.sections.map((sec) => (
-            <SectionCollapsible
-              key={sec.section}
-              section={sec}
-              onQuestionClick={onQuestionClick}
-            />
-          ))}
-        </div>
-      </CollapsibleContent>
-    </Collapsible>
-  );
-}
+                      <div className="flex shrink-0 items-center gap-2">
+                        {q.is_completed && q.taught_date && (
+                          <span className="text-xs text-muted-foreground">{fmt(q.taught_date)}</span>
+                        )}
+                        {!q.is_completed && (
+                          <Badge variant="outline" className="text-[10px]">Pending</Badge>
+                        )}
+                        {q.is_completed && (
+                          <ChevronRight className={cn(
+                            'h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-200',
+                            isExpanded && 'rotate-90'
+                          )} />
+                        )}
+                      </div>
+                    </button>
 
-// SECTION level collapsible
-function SectionCollapsible({
-  section: sec,
-  onQuestionClick,
-}: {
-  section: SectionGroup;
-  onQuestionClick: (
-    chapter_id: string,
-    question_index: number,
-    questionText: string,
-    isCompleted: boolean
-  ) => void;
-}) {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <Collapsible
-      open={open}
-      onOpenChange={setOpen}
-      className="rounded-lg border bg-muted/30"
-    >
-      <CollapsibleTrigger className="flex w-full items-center gap-2 p-3 text-left">
-        <ChevronRight
-          className={
-            'h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 ' +
-            (open ? 'rotate-90' : '')
-          }
-        />
-        <Layers className="h-4 w-4 shrink-0 text-muted-foreground" />
-        <span className="font-medium">
-          {sec.section === 'No section' ? 'No section' : `Section ${sec.section}`}
-        </span>
-        <Badge variant="outline" className="ml-auto shrink-0 text-[10px]">
-          {sec.chapters.length} chapter{sec.chapters.length !== 1 ? 's' : ''}
-        </Badge>
-      </CollapsibleTrigger>
-
-      <CollapsibleContent>
-        <div className="space-y-3 border-t p-2 sm:p-3">
-          {sec.chapters.map((ch) => (
-            <ChapterBlock
-              key={ch.chapter_id}
-              chapter={ch}
-              onQuestionClick={onQuestionClick}
-            />
-          ))}
-        </div>
-      </CollapsibleContent>
-    </Collapsible>
-  );
-}
-
-// Ek chapter ka block (progress + questions)
-function ChapterBlock({
-  chapter: ch,
-  onQuestionClick,
-}: {
-  chapter: ChapterLite;
-  onQuestionClick: (
-    chapter_id: string,
-    question_index: number,
-    questionText: string,
-    isCompleted: boolean
-  ) => void;
-}) {
-  const total = ch.questions.length;
-  const done = ch.questions.filter((q) => q.is_completed).length;
-  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-  const daysTaken = daysBetween(ch.start_date, ch.end_date);
-
-  return (
-    <div className="rounded-lg border bg-background p-3 sm:p-4">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2 font-medium">
-            <span className="wrap-break-word">
-              {ch.order_index ? `Ch ${ch.order_index}: ` : ''}
-              {ch.chapter_name}
-            </span>
-            {ch.is_completed ? (
-              <Badge className="bg-emerald-600 hover:bg-emerald-600">
-                Completed
-              </Badge>
-            ) : (
-              <Badge variant="secondary">In Progress</Badge>
-            )}
-          </div>
-          <div className="mt-1 text-xs text-muted-foreground">
-            {done}/{total} questions taught
-          </div>
-        </div>
-        <div className="text-left text-xs text-muted-foreground sm:text-right">
-          <div className="flex items-center gap-1">
-            <CalendarDays className="h-3.5 w-3.5 shrink-0" />
-            {formatDate(ch.start_date)} → {formatDate(ch.end_date)}
-          </div>
-          {daysTaken != null && (
-            <div className="mt-1 font-medium text-foreground">
-              {daysTaken} day{daysTaken !== 1 ? 's' : ''} taken
+                    {isExpanded && (
+                      <div className="border-t bg-muted/20 px-4 py-3">
+                        {attendance === 'loading' || !attendance ? (
+                          <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
+                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-muted border-t-primary" />
+                            Loading attendance…
+                          </div>
+                        ) : attendance === 'error' ? (
+                          <p className="py-2 text-xs text-muted-foreground">Could not load attendance.</p>
+                        ) : !attendance.taught_date ? (
+                          <p className="py-2 text-xs text-muted-foreground">No date available.</p>
+                        ) : (
+                          <AttendanceInline
+                            data={attendance}
+                            catchup={catchup}
+                            chapter_id={chapter.chapter_id}
+                            question_index={i}
+                            qKey={qKey}
+                            onCaughtUp={handleCaughtUp}
+                          />
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
-      </div>
-
-      <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted">
-        <div
-          className="h-full bg-primary transition-all"
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-
-      {ch.questions.length > 0 && (
-        <ul className="mt-3 space-y-1.5">
-          {ch.questions.map((q, i) => (
-            <li key={i}>
-              <button
-                type="button"
-                disabled={!q.is_completed}
-                onClick={() =>
-                  onQuestionClick(ch.chapter_id, i, q.text, q.is_completed)
-                }
-                className={
-                  'flex w-full items-start gap-2 rounded-md border bg-muted/30 p-2 text-left text-sm transition-colors ' +
-                  (q.is_completed
-                    ? 'cursor-pointer hover:bg-accent'
-                    : 'cursor-default')
-                }
-                title={
-                  q.is_completed
-                    ? 'Click to see who was present that day'
-                    : 'Question not taught yet'
-                }
-              >
-                {q.is_completed ? (
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-                ) : (
-                  <Circle className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                )}
-                <span
-                  className={
-                    'min-w-0 wrap-break-word ' +
-                    (q.is_completed ? 'text-muted-foreground' : '')
-                  }
-                >
-                  {q.text}
-                </span>
-                {q.is_completed && q.taught_date ? (
-                  <Badge
-                    variant="outline"
-                    className="ml-auto shrink-0 text-[10px]"
-                  >
-                    {formatDate(q.taught_date)}
-                  </Badge>
-                ) : (
-                  <Badge
-                    variant="outline"
-                    className="ml-auto shrink-0 text-[10px]"
-                  >
-                    Pending
-                  </Badge>
-                )}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+      </SheetContent>
+    </Sheet>
   );
 }
 
-// Question-day attendance ke present/absent/not-marked groups
-function QuestionDayView({ data }: { data: QuestionDayAttendance }) {
-  const totalClass =
-    data.present.length + data.absent.length + data.notMarked.length;
+/* ─────────────────────────────────────────────────────────────────
+   INLINE ATTENDANCE
+──────────────────────────────────────────────────────────────────*/
+function AttendanceInline({
+  data, catchup, chapter_id, question_index, qKey, onCaughtUp,
+}: {
+  data: QuestionDayAttendance;
+  catchup: { catchup: CatchupStudentInfo[]; mastery: CatchupStudentInfo[] } | undefined;
+  chapter_id: string;
+  question_index: number;
+  qKey: string;
+  onCaughtUp: (qKey: string, chapter_id: string, qIndex: number, student_id: string, type: 'catchup' | 'mastery') => void;
+}) {
+  const total = data.present.length + data.absent.length + data.notMarked.length;
+
+  // IDs of students who are caught up or mastered
+  const caughtUpIds = new Set(catchup?.catchup.map((c) => c.student_id) ?? []);
+  const masteryIds  = new Set(catchup?.mastery.map((c) => c.student_id) ?? []);
 
   return (
     <div className="space-y-4">
       {/* Summary */}
-      <div className="grid grid-cols-3 gap-2">
-        <div className="rounded-lg border p-3 text-center">
-          <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-500">
-            {data.present.length}
-          </div>
-          <div className="text-xs text-muted-foreground">Present</div>
-        </div>
-        <div className="rounded-lg border p-3 text-center">
-          <div className="text-2xl font-bold text-rose-600 dark:text-rose-500">
-            {data.absent.length}
-          </div>
-          <div className="text-xs text-muted-foreground">Absent</div>
-        </div>
-        <div className="rounded-lg border p-3 text-center">
-          <div className="text-2xl font-bold text-muted-foreground">
-            {data.notMarked.length}
-          </div>
-          <div className="text-xs text-muted-foreground">Not marked</div>
-        </div>
+      <div className="flex items-center gap-4 text-xs">
+        <span className="font-semibold text-emerald-600 dark:text-emerald-500">
+          ✓ {data.present.length} present
+        </span>
+        <span className="font-semibold text-rose-600 dark:text-rose-500">
+          ✗ {data.absent.length} absent
+        </span>
+        {data.notMarked.length > 0 && (
+          <span className="text-muted-foreground">{data.notMarked.length} not marked</span>
+        )}
+        <span className="ml-auto text-muted-foreground">{total} students</span>
       </div>
 
-      <p className="text-xs text-muted-foreground">
-        {data.subject_name ?? 'Subject'}
-        {data.grade_level ? ` · Grade ${data.grade_level}` : ''}
-        {data.section ? ` · Section ${data.section}` : ''} · {totalClass}{' '}
-        students
-      </p>
-
-      {/* Absent students - sabse zaroori, upar */}
+      {/* Absent — with Mark Caught Up button */}
       {data.absent.length > 0 && (
         <div className="space-y-2">
-          <div className="flex items-center gap-2 text-sm font-medium">
-            <UserX className="h-4 w-4 text-rose-600 dark:text-rose-500" />
-            Absent ({data.absent.length})
+          <div className="flex items-center gap-1.5 text-xs font-medium">
+            <UserX className="h-3.5 w-3.5 text-rose-500" />
+            Absent — mark caught up if student covered the topic later
+          </div>
+          <div className="space-y-1.5">
+            {data.absent.map((s) => {
+              const isCaughtUp = caughtUpIds.has(s.student_id);
+              return (
+                <div key={s.student_id} className="flex items-center justify-between gap-2 rounded-md border bg-background px-3 py-2">
+                  <span className="text-sm">
+                    <span className="font-medium">#{s.roll_number}</span>{' '}
+                    {s.full_name}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant={isCaughtUp ? 'default' : 'outline'}
+                    className={cn(
+                      'h-7 gap-1.5 text-xs',
+                      isCaughtUp && 'bg-emerald-600 hover:bg-emerald-700'
+                    )}
+                    onClick={() => onCaughtUp(qKey, chapter_id, question_index, s.student_id, 'catchup')}
+                  >
+                    <RefreshCcw className="h-3 w-3" />
+                    {isCaughtUp ? 'Caught Up ✓' : 'Mark Caught Up'}
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Present */}
+      {data.present.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-1.5 text-xs font-medium">
+            <UserCheck className="h-3.5 w-3.5 text-emerald-500" />
+            Present
           </div>
           <div className="flex flex-wrap gap-1.5">
-            {data.absent.map((s) => (
-              <Badge
-                key={s.student_id}
-                variant="outline"
-                className="border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-400"
-              >
+            {data.present.map((s) => (
+              <Badge key={s.student_id} variant="outline"
+                className="border-emerald-500/30 bg-emerald-500/10 text-xs text-emerald-700 dark:text-emerald-400">
                 #{s.roll_number} {s.full_name}
               </Badge>
             ))}
@@ -538,22 +465,17 @@ function QuestionDayView({ data }: { data: QuestionDayAttendance }) {
         </div>
       )}
 
-      {/* Present students */}
-      {data.present.length > 0 && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 text-sm font-medium">
-            <UserCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-500" />
-            Present ({data.present.length})
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {data.present.map((s) => (
-              <Badge
-                key={s.student_id}
-                variant="outline"
-                className="border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-              >
-                #{s.roll_number} {s.full_name}
-              </Badge>
+      {/* Already caught up summary */}
+      {(catchup?.catchup.length ?? 0) > 0 && (
+        <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2">
+          <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
+            ✓ {catchup!.catchup.length} student{catchup!.catchup.length !== 1 ? 's' : ''} caught up
+          </p>
+          <div className="mt-1 flex flex-wrap gap-1">
+            {catchup!.catchup.map((c) => (
+              <span key={c.student_id} className="text-xs text-muted-foreground">
+                #{c.roll_number} {c.full_name} ({c.caught_up_date})
+              </span>
             ))}
           </div>
         </div>
@@ -561,14 +483,13 @@ function QuestionDayView({ data }: { data: QuestionDayAttendance }) {
 
       {/* Not marked */}
       {data.notMarked.length > 0 && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 text-sm font-medium">
-            <HelpCircle className="h-4 w-4 text-muted-foreground" />
-            Not marked ({data.notMarked.length})
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+            <HelpCircle className="h-3.5 w-3.5" /> Not marked
           </div>
           <div className="flex flex-wrap gap-1.5">
             {data.notMarked.map((s) => (
-              <Badge key={s.student_id} variant="secondary">
+              <Badge key={s.student_id} variant="secondary" className="text-xs">
                 #{s.roll_number} {s.full_name}
               </Badge>
             ))}
@@ -576,10 +497,8 @@ function QuestionDayView({ data }: { data: QuestionDayAttendance }) {
         </div>
       )}
 
-      {totalClass === 0 && (
-        <p className="py-4 text-center text-sm text-muted-foreground">
-          No students or attendance records found for this section and date.
-        </p>
+      {total === 0 && (
+        <p className="text-xs text-muted-foreground">No students found for this section and date.</p>
       )}
     </div>
   );
