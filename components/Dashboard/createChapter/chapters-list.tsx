@@ -1,78 +1,45 @@
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getChapters } from '@/lib/actions/chapter-actions';
+import { getSubjects } from '@/lib/actions/subject-actions';
+import { ChaptersTable } from './chapters-table';
 
 export async function ChaptersList() {
-  const chapters = await getChapters();
+  const [chapters, subjects] = await Promise.all([
+    getChapters(),
+    getSubjects(),
+  ]);
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Chapters</CardTitle>
-        <CardDescription>All chapters in the system</CardDescription>
-      </CardHeader>
-      <CardContent>
-        {chapters.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No chapters created yet.
-          </p>
-        ) : (
-          <ul className="space-y-3">
-            {chapters.map((chapter) => {
-              const total = chapter.questions?.length ?? 0;
-              const done =
-                chapter.questions?.filter((q) => q.is_completed).length ?? 0;
-              return (
-                <li
-                  key={chapter.chapter_id}
-                  className="flex items-center justify-between gap-2 rounded-md border p-3"
-                >
-                  <div>
-                    <p className="text-sm font-medium">
-                      {chapter.order_index ? `Ch ${chapter.order_index}: ` : ''}
-                      {chapter.chapter_name}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {chapter.subject_name ?? 'Unknown subject'} · {done}/
-                      {total} questions
-                    </p>
-                  </div>
-                  {chapter.is_completed ? (
-                    <Badge className="bg-green-600 hover:bg-green-600">
-                      Completed
-                    </Badge>
-                  ) : (
-                    <Badge variant="secondary">In Progress</Badge>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </CardContent>
-    </Card>
-  );
+  const chaptersData = chapters.map((c) => ({
+    chapter_id:   c.chapter_id,
+    chapter_name: c.chapter_name,
+    subject_name: c.subject_name,
+    section:      c.section,
+    order_index:  c.order_index,
+    is_completed: !!c.is_completed,
+    start_date:   c.start_date,
+    end_date:     c.end_date,
+    questions:    (c.questions ?? []).map((q) => ({ is_completed: q.is_completed })),
+  }));
+
+  const subjectsData = subjects.map((s) => ({
+    subject_id:   s.subject_id,
+    subject_name: s.subject_name,
+  }));
+
+  return <ChaptersTable chapters={chaptersData} subjects={subjectsData} />;
 }
 
 export function ChaptersListSkeleton() {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Chapters</CardTitle>
-        <CardDescription>All chapters in the system</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <Skeleton className="h-14 w-full" />
-        <Skeleton className="h-14 w-full" />
-        <Skeleton className="h-14 w-full" />
-      </CardContent>
-    </Card>
+    <div className="space-y-3">
+      <div className="flex gap-2">
+        <Skeleton className="h-9 flex-1" />
+        <Skeleton className="h-9 w-36" />
+        <Skeleton className="h-9 w-28" />
+      </div>
+      {[1, 2, 3, 4].map((i) => (
+        <Skeleton key={i} className="h-12 w-full" />
+      ))}
+    </div>
   );
 }

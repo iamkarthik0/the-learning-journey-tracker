@@ -66,7 +66,7 @@ const data = {
       icon: CalendarCheck,
     },
     {
-      title: "Create",
+      title: "Principal",
       url: "/dashboard/create",
       icon: PlusSquare,
     },

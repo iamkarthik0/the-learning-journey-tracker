@@ -1,261 +1,394 @@
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 import {
-  TypographyH1,
-  TypographyH2,
-  TypographyH3,
-  TypographyH4,
-  TypographyP,
-  TypographyBlockquote,
-  TypographyList,
-  TypographyInlineCode,
-  TypographyLead,
-  TypographyLarge,
-  TypographySmall,
-  TypographyMuted,
-  TypographyTable,
-} from "@/components/ui/typography";
+  BookOpen,
+  Users,
+  BarChart3,
+  CheckCircle2,
+  ClipboardCheck,
+  GraduationCap,
+  CalendarCheck,
+  Shield,
+  ArrowRight,
+  AlertTriangle,
+  TrendingUp,
+  BookMarked,
+  UserCheck,
+  Bell,
+} from 'lucide-react';
 
-export default function Home() {
+/* ── Data ── */
+const problems = [
+  {
+    icon: AlertTriangle,
+    title: 'No Chapter-wise Tracking',
+    desc: 'Teachers have no way to know which students missed specific lessons. A student absent during the Sine Rule class has no record of it.',
+  },
+  {
+    icon: ClipboardCheck,
+    title: 'Attendance is Just a Number',
+    desc: 'Traditional attendance systems mark present or absent — but never tell you what a student missed while they were away.',
+  },
+  {
+    icon: BookMarked,
+    title: 'Progress is Invisible',
+    desc: 'Principals and teachers cannot see which chapters are completed, how many questions are taught, or which sections are falling behind.',
+  },
+  {
+    icon: Bell,
+    title: 'No Catch-up System',
+    desc: 'When a student returns after absence, there is no structured way to track whether they caught up on missed content.',
+  },
+];
+
+const features = [
+  {
+    icon: BookOpen,
+    title: 'Chapter & Question Tracking',
+    desc: 'Create chapters with individual questions. Mark each question as taught with an automatic date stamp. Track progress question by question.',
+    badge: 'Core',
+  },
+  {
+    icon: ClipboardCheck,
+    title: 'Smart Attendance',
+    desc: 'Mark daily attendance per student. When a question is taught, instantly see which students were present and who was absent that exact day.',
+    badge: 'Core',
+  },
+  {
+    icon: UserCheck,
+    title: 'Catch-up Management',
+    desc: 'Mark absent students as "Caught Up" after they review missed content. Track mastery separately for present students who demonstrate understanding.',
+    badge: 'Smart',
+  },
+  {
+    icon: BarChart3,
+    title: 'Principal Dashboard',
+    desc: 'School-wide analytics — total students, chapter completion %, 7-day attendance trend, grade-wise distribution, and section-level insights.',
+    badge: 'Analytics',
+  },
+  {
+    icon: TrendingUp,
+    title: 'Student History',
+    desc: 'View any student\'s complete attendance history, which questions they missed, and their catch-up status — filtered by date range.',
+    badge: 'History',
+  },
+  {
+    icon: CalendarCheck,
+    title: 'Daily Log',
+    desc: 'Teachers get a focused daily view — see exactly what to teach today, mark questions as done, and auto-complete chapters on finish.',
+    badge: 'Daily',
+  },
+];
+
+const roles = [
+  {
+    icon: Shield,
+    role: 'Principal',
+    color: 'bg-primary text-primary-foreground',
+    can: [
+      'View school-wide analytics dashboard',
+      'Add teachers and manage period sessions',
+      'Track chapter completion across all subjects',
+      'Monitor section-wise attendance rates',
+    ],
+  },
+  {
+    icon: GraduationCap,
+    role: 'Teacher',
+    color: 'bg-emerald-600 text-white',
+    can: [
+      'Create subjects and chapters with questions',
+      'Mark daily student attendance',
+      'Log taught questions in the Daily Log',
+      'Mark students as caught up on missed content',
+    ],
+  },
+  {
+    icon: Users,
+    role: 'Analyst',
+    color: 'bg-chart-1 text-white',
+    can: [
+      'View question-level attendance per chapter',
+      'Track student learning history over time',
+      'Identify students at risk of falling behind',
+      'Analyse chapter completion rates by subject',
+    ],
+  },
+];
+
+/* ── Page ── */
+export default function HomePage() {
   return (
-    <div className="min-h-screen p-8">
-      <div className="max-w-6xl mx-auto space-y-8">
-        <TypographyH1>Taxing Laughter: The Joke Tax Chronicles</TypographyH1>
-        
-        <TypographyLead>
-          A modal dialog that interrupts the user with important content and expects a response.
-        </TypographyLead>
+    <div className="min-h-screen">
 
-        <TypographyP>
-          Once upon a time, in a far-off land, there was a very lazy king who spent all day lounging on his throne. One day, his advisors came to him with a problem: the kingdom was running out of money.
-        </TypographyP>
+      {/* ── HERO ─────────────────────────────────────────────────── */}
+      <section className="relative overflow-hidden border-b bg-background">
+        <div className="mx-auto max-w-5xl px-4 py-20 sm:px-6 sm:py-28 text-center">
+          <Badge variant="secondary" className="mb-6 gap-1.5 px-3 py-1.5 text-xs">
+            <BookOpen className="h-3.5 w-3.5" />
+            For Schools · Teachers · Principals
+          </Badge>
 
-        <TypographyH2>The King's Plan</TypographyH2>
+          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
+            The Learning Journey
+            <span className="block text-primary mt-1">Tracker</span>
+          </h1>
 
-        <TypographyP>
-          The king thought long and hard, and finally came up with a brilliant plan: he would tax the jokes in the kingdom.
-        </TypographyP>
+          <p className="mx-auto mt-6 max-w-2xl text-base text-muted-foreground sm:text-lg leading-relaxed">
+            Know exactly what every student learned — and what they missed.
+            Track attendance at the <strong>question level</strong>, not just the class level.
+          </p>
 
-        <TypographyBlockquote>
-          "After all," he said, "everyone enjoys a good joke, so it's only fair that they should pay for the privilege."
-        </TypographyBlockquote>
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
+            <Button asChild size="lg" className="gap-2 h-12 px-8">
+              <Link href="/dashboard">
+                Go to Dashboard
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="lg" className="h-12 px-8">
+              <Link href="/dashboard/teacher">
+                Teacher Dashboard
+              </Link>
+            </Button>
+          </div>
 
-        <TypographyH3>The Joke Tax</TypographyH3>
-
-        <TypographyP>
-          The king's subjects were not amused. They grumbled and complained, but the king was firm:
-        </TypographyP>
-
-        <TypographyList>
-          <li>1st level of puns: 5 gold coins</li>
-          <li>2nd level of jokes: 10 gold coins</li>
-          <li>3rd level of one-liners: 20 gold coins</li>
-        </TypographyList>
-
-        <TypographyP>
-          As a result, people stopped telling jokes, and the kingdom fell into a gloom. But there was one person who refused to let the king's foolishness get him down: a court jester named Jokester.
-        </TypographyP>
-
-        <TypographyH3>Jokester's Revolt</TypographyH3>
-
-        <TypographyP>
-          Jokester began sneaking into the castle in the middle of the night and leaving jokes all over the place: under the king's pillow, in his soup, even in the royal toilet. The king was furious, but he couldn't seem to stop Jokester.
-        </TypographyP>
-
-        <TypographyH4>People stopped telling jokes</TypographyH4>
-
-        <TypographyP>
-          The people of the kingdom, feeling uplifted by the laughter, started to tell jokes and puns again, and soon the entire kingdom was in on the joke.
-        </TypographyP>
-
-        <TypographyTable />
-
-        <TypographyP>
-          The king, seeing how much happier his subjects were, realized the error of his ways and repealed the joke tax. Jokester was declared a hero, and the kingdom lived happily ever after.
-        </TypographyP>
-
-        <TypographyP>
-          The moral of the story is: never underestimate the power of a good laugh and always be careful of bad ideas.
-        </TypographyP>
-
-        {/* Typography Components Demo */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Typography Components</CardTitle>
-            <CardDescription>All Shadcn typography components</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div>
-              <TypographySmall>Small Text</TypographySmall>
-              <TypographyMuted>Muted text for less important information</TypographyMuted>
-            </div>
-            
-            <div>
-              <TypographyLarge>Are you absolutely sure?</TypographyLarge>
-            </div>
-
-            <div>
-              <TypographyP>
-                This is a paragraph with <TypographyInlineCode>inline code</TypographyInlineCode> inside it.
-              </TypographyP>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Typography Scale Demo */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Typography Scale (12/14/16/18/24/30/36)</CardTitle>
-            <CardDescription>Design system font sizes</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-xs">Extra Small - 12px (text-xs)</p>
-            <p className="text-sm">Small - 14px (text-sm)</p>
-            <p className="text-base">Base - 16px (text-base)</p>
-            <p className="text-lg">Large - 18px (text-lg)</p>
-            <p className="text-xl">Extra Large - 24px (text-xl)</p>
-            <p className="text-2xl">2XL - 30px (text-2xl)</p>
-            <p className="text-3xl">3XL - 36px (text-3xl)</p>
-          </CardContent>
-        </Card>
-
-        {/* Spacing Scale Demo */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Spacing Scale (4/8/12/16/24/32)</CardTitle>
-            <CardDescription>Design system spacing with visual bars</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <div className="flex items-center gap-4">
-                <div className="w-1 h-8 bg-primary"></div>
-                <span className="text-sm">4px (p-1, m-1, gap-1)</span>
+          {/* Quick stats row */}
+          <div className="mx-auto mt-16 grid max-w-2xl grid-cols-3 gap-6 text-center">
+            {[
+              { n: '100%', label: 'Question-level tracking' },
+              { n: '3',    label: 'Role-based dashboards' },
+              { n: '∞',   label: 'Catch-up history' },
+            ].map((s) => (
+              <div key={s.label}>
+                <div className="text-3xl font-bold text-primary">{s.n}</div>
+                <div className="mt-1 text-xs text-muted-foreground">{s.label}</div>
               </div>
-              <div className="flex items-center gap-4">
-                <div className="w-2 h-8 bg-primary"></div>
-                <span className="text-sm">8px (p-2, m-2, gap-2)</span>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="w-3 h-8 bg-primary"></div>
-                <span className="text-sm">12px (p-3, m-3, gap-3)</span>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="w-4 h-8 bg-primary"></div>
-                <span className="text-sm">16px (p-4, m-4, gap-4)</span>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="w-6 h-8 bg-primary"></div>
-                <span className="text-sm">24px (p-6, m-6, gap-6)</span>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="w-8 h-8 bg-primary"></div>
-                <span className="text-sm">32px (p-8, m-8, gap-8)</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            ))}
+          </div>
+        </div>
+      </section>
 
-        {/* Spacing Examples */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Spacing in Action</CardTitle>
-            <CardDescription>Real examples using design system spacing</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              {/* Padding Examples */}
-              <div>
-                <h3 className="text-lg font-semibold mb-3">Padding Examples</h3>
-                <div className="flex flex-wrap gap-4">
-                  <div className="p-1 bg-secondary border">p-1 (4px)</div>
-                  <div className="p-2 bg-secondary border">p-2 (8px)</div>
-                  <div className="p-3 bg-secondary border">p-3 (12px)</div>
-                  <div className="p-4 bg-secondary border">p-4 (16px)</div>
-                  <div className="p-6 bg-secondary border">p-6 (24px)</div>
-                  <div className="p-8 bg-secondary border">p-8 (32px)</div>
+      {/* ── PROBLEM ──────────────────────────────────────────────── */}
+      <section className="border-b bg-muted/30 py-16 sm:py-20">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6">
+          <div className="mb-10 text-center">
+            <Badge variant="outline" className="mb-3">The Problem</Badge>
+            <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
+              Traditional systems miss what matters most
+            </h2>
+            <p className="mt-3 text-sm text-muted-foreground sm:text-base max-w-xl mx-auto">
+              Schools track attendance. But no one tracks what a student missed — and whether they ever caught up.
+            </p>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {problems.map((p) => (
+              <Card key={p.title} className="border-destructive/20 bg-destructive/5">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-destructive/10">
+                      <p.icon className="h-4 w-4 text-destructive" />
+                    </div>
+                    <CardTitle className="text-sm leading-snug">{p.title}</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{p.desc}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── SOLUTION / FEATURES ──────────────────────────────────── */}
+      <section className="border-b py-16 sm:py-20">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6">
+          <div className="mb-10 text-center">
+            <Badge variant="outline" className="mb-3">What We Solve</Badge>
+            <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
+              Every feature is built around learning continuity
+            </h2>
+            <p className="mt-3 text-sm text-muted-foreground sm:text-base max-w-xl mx-auto">
+              From the moment a teacher marks a question as taught, the system knows which students were there —
+              and tracks whether absent students ever caught up.
+            </p>
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {features.map((f) => (
+              <Card key={f.title} className="relative overflow-hidden">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                      <f.icon className="h-5 w-5 text-primary" />
+                    </div>
+                    <Badge variant="secondary" className="text-[10px] mt-0.5">{f.badge}</Badge>
+                  </div>
+                  <CardTitle className="mt-3 text-sm">{f.title}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{f.desc}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── HOW IT WORKS ─────────────────────────────────────────── */}
+      <section className="border-b bg-muted/30 py-16 sm:py-20">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6">
+          <div className="mb-10 text-center">
+            <Badge variant="outline" className="mb-3">How It Works</Badge>
+            <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
+              Simple 4-step workflow
+            </h2>
+          </div>
+
+          <div className="relative">
+            {/* Connecting line */}
+            <div className="absolute left-6 top-0 h-full w-px bg-border sm:left-1/2" />
+
+            <div className="space-y-8">
+              {[
+                {
+                  step: '01',
+                  title: 'Set up subjects & chapters',
+                  desc: 'Principal or teacher creates subjects for each grade. Teachers add chapters with all questions/topics to be covered.',
+                  icon: BookOpen,
+                },
+                {
+                  step: '02',
+                  title: 'Mark attendance daily',
+                  desc: 'Teachers take attendance every class. The system records who was present or absent on each specific day.',
+                  icon: ClipboardCheck,
+                },
+                {
+                  step: '03',
+                  title: 'Log taught questions',
+                  desc: 'In the Daily Log, teachers check off each question as it is taught. The system stamps the date automatically.',
+                  icon: CheckCircle2,
+                },
+                {
+                  step: '04',
+                  title: 'Track & catch up',
+                  desc: 'Analytics instantly show who was absent when each question was taught. Teachers mark catch-ups as they happen.',
+                  icon: TrendingUp,
+                },
+              ].map((item, i) => (
+                <div key={item.step} className={`flex gap-6 ${i % 2 === 0 ? 'sm:flex-row' : 'sm:flex-row-reverse'}`}>
+                  <div className="flex shrink-0 flex-col items-center sm:w-1/2">
+                    {i % 2 === 0 ? (
+                      <div className="ml-auto pr-8 text-right hidden sm:block">
+                        <div className="text-4xl font-bold text-muted-foreground/30">{item.step}</div>
+                        <h3 className="mt-1 text-sm font-semibold">{item.title}</h3>
+                        <p className="mt-1 text-xs text-muted-foreground max-w-xs">{item.desc}</p>
+                      </div>
+                    ) : null}
+                    <div className={`relative z-10 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-4 border-background bg-primary text-primary-foreground ${i % 2 === 0 ? 'sm:mx-0' : ''}`}>
+                      <item.icon className="h-5 w-5" />
+                    </div>
+                    {i % 2 === 1 ? (
+                      <div className="pl-8 hidden sm:block sm:w-1/2">
+                        <div className="text-4xl font-bold text-muted-foreground/30">{item.step}</div>
+                        <h3 className="mt-1 text-sm font-semibold">{item.title}</h3>
+                        <p className="mt-1 text-xs text-muted-foreground max-w-xs">{item.desc}</p>
+                      </div>
+                    ) : null}
+                  </div>
+                  {/* Mobile-only text */}
+                  <div className="sm:hidden">
+                    <div className="text-3xl font-bold text-muted-foreground/30">{item.step}</div>
+                    <h3 className="mt-1 text-sm font-semibold">{item.title}</h3>
+                    <p className="mt-1 text-xs text-muted-foreground">{item.desc}</p>
+                  </div>
                 </div>
-              </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
 
-              {/* Gap Examples */}
-              <div>
-                <h3 className="text-lg font-semibold mb-3">Gap Examples</h3>
-                <div className="space-y-4">
-                  <div className="flex gap-1 flex-wrap">
-                    <Button size="sm">gap-1</Button>
-                    <Button size="sm">4px</Button>
-                    <Button size="sm">gap</Button>
-                  </div>
-                  <div className="flex gap-2 flex-wrap">
-                    <Button size="sm">gap-2</Button>
-                    <Button size="sm">8px</Button>
-                    <Button size="sm">gap</Button>
-                  </div>
-                  <div className="flex gap-4 flex-wrap">
-                    <Button size="sm">gap-4</Button>
-                    <Button size="sm">16px</Button>
-                    <Button size="sm">gap</Button>
-                  </div>
-                  <div className="flex gap-6 flex-wrap">
-                    <Button size="sm">gap-6</Button>
-                    <Button size="sm">24px</Button>
-                    <Button size="sm">gap</Button>
-                  </div>
+      {/* ── ROLES ────────────────────────────────────────────────── */}
+      <section className="border-b py-16 sm:py-20">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6">
+          <div className="mb-10 text-center">
+            <Badge variant="outline" className="mb-3">Who Uses It</Badge>
+            <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
+              Built for every role in your school
+            </h2>
+          </div>
+
+          <div className="grid gap-6 sm:grid-cols-3">
+            {roles.map((r) => (
+              <Card key={r.role} className="overflow-hidden">
+                <div className={`flex items-center gap-3 px-5 py-4 ${r.color}`}>
+                  <r.icon className="h-5 w-5" />
+                  <span className="font-semibold">{r.role}</span>
                 </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+                <CardContent className="pt-4">
+                  <ul className="space-y-2.5">
+                    {r.can.map((c) => (
+                      <li key={c} className="flex items-start gap-2 text-xs text-muted-foreground">
+                        <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" />
+                        {c}
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
 
-        {/* Button Sizes */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Button Sizes</CardTitle>
-            <CardDescription>Shadcn buttons with design system</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-4 items-center">
-              <Button size="xs">Extra Small</Button>
-              <Button size="sm">Small</Button>
-              <Button size="default">Default</Button>
-              <Button size="lg">Large</Button>
-            </div>
-          </CardContent>
-        </Card>
+      {/* ── CTA ──────────────────────────────────────────────────── */}
+      <section className="py-16 sm:py-20">
+        <div className="mx-auto max-w-2xl px-4 sm:px-6 text-center">
+          <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
+            Ready to track every learning moment?
+          </h2>
+          <p className="mt-4 text-sm text-muted-foreground sm:text-base">
+            Start using The Learning Journey Tracker today.
+            No student should fall behind because of a missed class.
+          </p>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+            <Button asChild size="lg" className="gap-2 h-12 px-8">
+              <Link href="/dashboard">
+                Open Dashboard
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="lg" className="h-12 px-8">
+              <Link href="/dashboard/create">
+                Principal Setup
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </section>
 
-        {/* Responsive Example */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Responsive Design</CardTitle>
-            <CardDescription>Using Tailwind responsive classes</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="p-4 md:p-6 lg:p-8 bg-secondary border">
-                <p className="text-sm md:text-base lg:text-lg">
-                  This box has responsive padding: p-4 (mobile) → p-6 (tablet) → p-8 (desktop)
-                </p>
+      {/* ── FOOTER ───────────────────────────────────────────────── */}
+      <footer className="border-t bg-muted/30 py-8">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6">
+          <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
+            <div className="flex items-center gap-2">
+              <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
+                <BookOpen className="h-4 w-4" />
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <Card>
-                  <CardContent className="p-4">
-                    <p className="text-sm">Card 1</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-4">
-                    <p className="text-sm">Card 2</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-4">
-                    <p className="text-sm">Card 3</p>
-                  </CardContent>
-                </Card>
-              </div>
+              <span className="text-sm font-semibold">The Learning Journey Tracker</span>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+            <p className="text-xs text-muted-foreground text-center sm:text-right">
+              Bridging the gap between attendance and learning outcomes.
+            </p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
